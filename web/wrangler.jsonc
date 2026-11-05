@@ -1,0 +1,6 @@
+// Cloudflare Worker serving the web build as static assets. web/dist is assembled by .github/workflows/web.yml.
+{
+  "name": "sapf",
+  "compatibility_date": "2026-11-01",
+  "assets": { "directory": "./dist" }
+}

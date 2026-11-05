@@ -1,0 +1,75 @@
+name: Web release
+
+# Builds the wasm web app, runs its tests, deploys it to Cloudflare and attaches it to the release.
+# Needs repo secrets CLOUDFLARE_API_TOKEN (Workers Scripts: Edit) and CLOUDFLARE_ACCOUNT_ID.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  EMSDK_VERSION: 5.0.7
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install emsdk
+        run: |
+          git clone --depth 1 https://github.com/emscripten-core/emsdk.git ~/emsdk
+          ~/emsdk/emsdk install $EMSDK_VERSION
+          ~/emsdk/emsdk activate $EMSDK_VERSION
+
+      # Restore and save are separate so the cache is kept even if a later step (tests, deploy) fails.
+      - name: Restore wasm dependencies
+        id: deps
+        uses: actions/cache/restore@v4
+        with:
+          path: web/deps
+          key: web-deps-${{ env.EMSDK_VERSION }}-${{ hashFiles('web/build-deps.sh') }}
+
+      - name: Build dependencies
+        if: steps.deps.outputs.cache-hit != 'true'
+        run: source ~/emsdk/emsdk_env.sh && web/build-deps.sh
+
+      - name: Save wasm dependencies
+        if: steps.deps.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: web/deps
+          key: ${{ steps.deps.outputs.cache-primary-key }}
+
+      - name: Build and test
+        run: |
+          source ~/emsdk/emsdk_env.sh
+          web/build.sh
+          node web/smoke.mjs
+          node web/build/test_sapf.js
+
+      - name: Assemble site
+        run: |
+          mkdir -p web/dist/build
+          cp web/index.html web/_headers web/dist/
+          cp web/build/sapf.mjs web/build/sapf.wasm web/dist/build/
+          (cd web/dist && zip -r ../../sapf-web.zip .)
+
+      - name: Deploy to Cloudflare
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: web
+          command: deploy
+
+      - name: Attach to release
+        if: github.event_name == 'release'
+        run: gh release upload "${{ github.event.release.tag_name }}" sapf-web.zip --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
