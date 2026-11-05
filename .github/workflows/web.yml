@@ -65,6 +65,8 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # The v3 action defaults to wrangler 3.90, which cannot deploy an assets-only Worker or read _headers.
+          wranglerVersion: "4"
           workingDirectory: web
           command: deploy
 
