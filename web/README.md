@@ -28,6 +28,8 @@ What works:
 - `sgram` writes spectrogram JPEGs through libjpeg (to `/tmp`).
 - Tests that passed:
   - `node web/smoke.mjs` (Node plays the audio thread's role):
+    - all 369 of sapf's own language tests in `unit-tests.txt` pass. The test lists any that
+      fail; checked by breaking one test on purpose
     - the prelude loads
     - `fft` of a shifted impulse gives the exact expected spectrum
     - `440 0 sinosc .3 * play` renders with the right level (RMS 0.212) and pitch (440 Hz)
@@ -54,8 +56,11 @@ What works:
       never showed a step larger than the playing sine's own, and each `stop` finished in
       9–14 ms
     - syntax errors are printed to the page log, and the console shows no errors
-  - sapf's own language tests (`unit-tests.txt`): all 369 pass on the Node build. This is not
-    yet part of `smoke.mjs`.
+  - `node web/build/test_sapf.js`: sapf's C++ doctest suite (`test/*.cpp`) passes on wasm:
+    29 of 29 test cases, 9,974,926 assertions, in about 7 seconds. It covers math ops,
+    oscillator UGens, stream ops, MIDI packets, sound files (libsndfile, resampling),
+    the async file writer thread, and spectrogram images. A failing test makes the process
+    exit with a non-zero code (checked with a deliberately failing test).
 
 What does not work yet:
 
@@ -118,9 +123,9 @@ main thread (index.html)        eval thread (pthread)          audio thread (Was
 | `shim/RtAudio.h` | Fake RtAudio. `openStream` records the callback; `sapf_render` calls every recorded callback and sums them. A mutex guards the list. `stopStream` marks the stream as fading and waits; `sapf_render` applies a 10 ms linear fade and then drops the stream, after which `Play.cpp` deletes the `Player`. `src/Play.cpp` builds unchanged. |
 | `shim/RtMidi.h` | RtMidi with no ports. |
 | `shim/readline/*.h` | Empty readline API, so `src/VM.cpp` builds with `USE_LIBEDIT=0`. |
-| `build-deps.sh` | Downloads xsimd, eigen, fftw and libsndfile (checking SHA-256 hashes) into `$DEPS`, and builds fftw and libsndfile as static wasm libraries with `-pthread` into `$DEPS/prefix`. |
-| `build.sh` | Compiles every `src/*.cpp` listed in `meson.build` (except `main.cpp`), plus `sapf_web.cpp`, `audio_worklet.cpp` and `r8bbase.cpp`, with `-pthread`. Links fftw and libsndfile from `$DEPS/prefix` and libjpeg from Emscripten's port (`-sUSE_LIBJPEG=1`, fetched by Emscripten on first use). Exports `FS` so the page can reach files. Links two outputs: `build/sapf.mjs` (browser, with `-sAUDIO_WORKLET -sWASM_WORKERS`) and `build/sapf-node.mjs` (Node, no audio output). `sapf-prelude.txt` is embedded. Thread stacks are 2 MB (Emscripten's default of 64 KB is too small for sapf); the audio worklet stack is 1 MB. |
-| `smoke.mjs` | Node test (assert-based), using `build/sapf-node.mjs`. |
+| `build-deps.sh` | Downloads xsimd, eigen, doctest, fftw and libsndfile (checking SHA-256 hashes) into `$DEPS`, and builds fftw and libsndfile as static wasm libraries with `-pthread` into `$DEPS/prefix`. |
+| `build.sh` | Compiles every `src/*.cpp` listed in `meson.build` (except `main.cpp`), plus `sapf_web.cpp`, `audio_worklet.cpp` and `r8bbase.cpp`, with `-pthread`. Links fftw and libsndfile from `$DEPS/prefix` and libjpeg from Emscripten's port (`-sUSE_LIBJPEG=1`, fetched by Emscripten on first use). Exports `FS` so the page can reach files. Links three outputs: `build/sapf.mjs` (browser, with `-sAUDIO_WORKLET -sWASM_WORKERS`), `build/sapf-node.mjs` (Node, no audio output; `sapf-prelude.txt` is embedded in both), and `build/test_sapf.js` (the C++ test suite in `test/`, whose `main` runs on a pthread through `-sPROXY_TO_PTHREAD` so tests can block and join threads). Thread stacks are 2 MB (Emscripten's default of 64 KB is too small for sapf); the audio worklet stack is 1 MB. |
+| `smoke.mjs` | Node test (assert-based), using `build/sapf-node.mjs`. Also runs `unit-tests.txt`. |
 | `serve.py` | Dev server with the cross-origin isolation headers. |
 | `index.html` | Demo page: code editor, Run/Stop buttons and log. |
 
@@ -133,8 +138,8 @@ You need:
 2. The r8brain submodule: `git submodule update --init`.
 3. CMake (for building fftw and libsndfile).
 
-Prepare the dependencies once. This downloads xsimd 13.2.0, eigen 3.4.0, fftw 3.3.10 and
-libsndfile 1.2.2, checks their hashes, and builds fftw and libsndfile for wasm. It takes about
+Prepare the dependencies once. This downloads xsimd 13.2.0, eigen 3.4.0, doctest 2.4.11,
+fftw 3.3.10 and libsndfile 1.2.2, checks their hashes, and builds fftw and libsndfile for wasm. It takes about
 two minutes:
 
 ```bash
@@ -146,6 +151,7 @@ Then build and test (a full build takes about 15 seconds):
 ```bash
 DEPS=/path/to/deps web/build.sh
 node web/smoke.mjs
+node web/build/test_sapf.js
 ```
 
 Run the demo. Plain `python3 -m http.server` will not work, because it does not send the
@@ -162,28 +168,26 @@ Esc stops the sound.
 
 Hardening the wasm engine:
 
-1. **Run the existing test suites on wasm.** Add `unit-tests.txt` to `smoke.mjs` (it already
-   passes), and build the C++ doctest suite in `test/` with `em++` and run it under Node.
-2. **Run under AddressSanitizer.** Wasm does not trap on most out-of-bounds or use-after-free
+1. **Run under AddressSanitizer.** Wasm does not trap on most out-of-bounds or use-after-free
    accesses inside its memory; they silently corrupt data. Emscripten supports
-   `-fsanitize=address` with pthreads, so the test suites can run under it.
-3. **Check stack overflow.** Wasm threads have no guard page. Deep recursion in user code can
+   `-fsanitize=address` with pthreads, so `smoke.mjs` and `test_sapf.js` can run under it.
+2. **Check stack overflow.** Wasm threads have no guard page. Deep recursion in user code can
    run past the 2 MB thread stack into other memory instead of crashing. Test it, and consider
    `-sSTACK_OVERFLOW_CHECK=2` so it fails cleanly.
-4. **Stress the audio thread.** Heavy evaluation, `go` threads touching playing lists, and many
+3. **Stress the audio thread.** Heavy evaluation, `go` threads touching playing lists, and many
    simultaneous sounds. The audio thread busy-waits on locks, including the allocator's global
    lock when it allocates; `-sMALLOC=mimalloc` (per-thread heaps) may reduce that.
-5. **Test other browsers.** Firefox and Safari.
+4. **Test other browsers.** Firefox and Safari.
 
 Later:
 
-6. **Add file access.** Add download links for recordings and spectrograms, and file upload for
+5. **Add file access.** Add download links for recordings and spectrograms, and file upload for
    `sf>`. Keep user files in IDBFS so they survive a reload, and preload `sapf-examples.txt`.
-7. **Move the build into meson.** Use an Emscripten cross file and a `web` option that turns off
+6. **Move the build into meson.** Use an Emscripten cross file and a `web` option that turns off
    rtaudio, rtmidi, libedit and OSC, and get xsimd and eigen from the existing wraps.
-8. **Write a proper Web Audio backend.** Replace the RtAudio shim with a `#ifdef __EMSCRIPTEN__`
+7. **Write a proper Web Audio backend.** Replace the RtAudio shim with a `#ifdef __EMSCRIPTEN__`
    backend in `src/Play.cpp`, next to the AudioToolbox and RtAudio ones.
-9. **Add compressed formats.** Build libogg, libvorbis, FLAC and Opus for wasm and turn on
+8. **Add compressed formats.** Build libogg, libvorbis, FLAC and Opus for wasm and turn on
    libsndfile's external libraries, if those formats are needed.
 
 ## Licence

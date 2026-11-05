@@ -1,6 +1,7 @@
 // Node smoke test for the threaded wasm build: node web/smoke.mjs
 // Here Node's main thread plays the audio thread's role and calls sapf_render itself.
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import createSapf from './build/sapf-node.mjs';
 
 let out = '';
@@ -13,6 +14,17 @@ const evalSapf = async code => { out = ''; sapf.ccall('sapf_eval', null, ['strin
 sapf.ccall('sapf_init', null, ['number', 'string'], [SR, 'sapf-prelude.txt']);
 await idle();
 assert.match(out, /done loading file/, 'prelude loads');
+
+// sapf's own language tests. throwOnError off, so every failure is listed, not just the first.
+const unitSrc = fs.readFileSync(new URL('../unit-tests.txt', import.meta.url), 'utf8');
+assert.match(unitSrc, /^1 = throwOnError/m, 'unit-tests.txt header changed');
+const unitOut = await evalSapf(unitSrc.replace(/^1 = throwOnError/m, '0 = throwOnError'));
+const unitTests = unitOut.split(/^Testing : /m).slice(1); // one chunk per test, starting with its source
+const unitRun = unitTests.length;
+assert.ok(unitRun > 300, `unit tests ran: ${unitRun}`);
+const unitFailed = unitTests.filter(t => !/^Passed$/m.test(t)).map(t => t.split('\n')[0]);
+assert.deepEqual(unitFailed, [], 'unit tests failed');
+await evalSapf('clear');
 
 // FFT through the fftw shim: impulse delayed by 2 -> 0.25*e^{-i*pi*k/2} (sapf scales forward by 2/n)
 const fftOut = await evalSapf('#[0 0 1 0 0 0 0 0] #[0 0 0 0 0 0 0 0] fft');
@@ -98,6 +110,6 @@ const jpg = sapf.FS.readFile('/tmp/spec-60.jpg');
 assert.deepEqual([...jpg.subarray(0, 3)], [0xff, 0xd8, 0xff], 'sgram writes a JPEG');
 assert.doesNotMatch(sgramOut, /does not exist/, 'system() did not run on the host');
 
-console.log(`OK  rms=${rms.toFixed(4)} freq≈${crossings}Hz  rendered 1s in ${ms.toFixed(1)}ms while eval slept; go works;` +
+console.log(`OK  unit-tests.txt ${unitRun}/${unitRun};  rms=${rms.toFixed(4)} freq≈${crossings}Hz  rendered 1s in ${ms.toFixed(1)}ms while eval slept; go works;` +
   ` >sf/sf> ok; record wrote ${recFrames} frames; sgram jpeg ${jpg.length} bytes`);
 process.exit(0); // pthread workers keep Node alive

@@ -3,6 +3,7 @@
 # Wasm Audio Worklet (audio thread). Outputs:
 #   web/build/sapf.mjs       browser build (needs cross-origin isolation, see web/serve.py)
 #   web/build/sapf-node.mjs  Node build without audio output, for web/smoke.mjs
+#   web/build/test_sapf.js   sapf's C++ doctest suite (test/*.cpp); run: node web/build/test_sapf.js
 # usage: DEPS=/path/to/deps web/build.sh   (prepare DEPS once with web/build-deps.sh)
 set -e
 cd "$(dirname "$0")/.."
@@ -14,17 +15,21 @@ FLAGS="-std=c++17 -O2 -msimd128 -fexceptions -pthread -sUSE_LIBJPEG=1 -D_USE_MAT
 
 SRCS="$(grep -oE "'src/[A-Za-z_]+\.cpp'" meson.build | tr -d "'" | sort -u | grep -v main.cpp) web/sapf_web.cpp third_party/r8brain/src/r8bbase.cpp"
 OBJS=""
+TEST_SRCS="test/doctest.cpp test/ImageHelpers.cpp $(ls test/test_*.cpp)"
 for f in $SRCS web/audio_worklet.cpp; do
   em++ $FLAGS -c $f -o $OUT/obj/$(basename $f .cpp).o &
+done
+for f in $TEST_SRCS; do
+  em++ $FLAGS -DTEST_BUILD -Itest/helpers -I$DEPS/doctest-2.4.11/doctest -c $f -o $OUT/obj/$(basename $f .cpp).o &
 done
 wait
 for f in $SRCS; do OBJS="$OBJS $OUT/obj/$(basename $f .cpp).o"; done
 OBJS="$OBJS $DEPS/prefix/lib/libsndfile.a $DEPS/prefix/lib/libfftw3.a"
 
 # Thread stacks: Emscripten's default is 64 KB; sapf's evaluator recurses deeply (native threads get 512 KB+).
-LINK="-O2 -fexceptions -pthread -sUSE_LIBJPEG=1 -sMODULARIZE -sEXPORT_ES6 -sALLOW_MEMORY_GROWTH -sINITIAL_MEMORY=256MB
-  -sSTACK_SIZE=4MB -sDEFAULT_PTHREAD_STACK_SIZE=2MB -sPTHREAD_POOL_SIZE=4
-  --embed-file sapf-prelude.txt"
+BASE="-O2 -fexceptions -pthread -sUSE_LIBJPEG=1 -sALLOW_MEMORY_GROWTH -sINITIAL_MEMORY=256MB
+  -sSTACK_SIZE=4MB -sDEFAULT_PTHREAD_STACK_SIZE=2MB -sPTHREAD_POOL_SIZE=4"
+LINK="$BASE -sMODULARIZE -sEXPORT_ES6 --embed-file sapf-prelude.txt"
 EXPORTS=_sapf_init,_sapf_eval,_sapf_busy,_sapf_render,_sapf_num_playing,_malloc,_free
 
 em++ $OBJS $OUT/obj/audio_worklet.o -o $OUT/sapf.mjs $LINK -sENVIRONMENT=web \
@@ -32,4 +37,8 @@ em++ $OBJS $OUT/obj/audio_worklet.o -o $OUT/sapf.mjs $LINK -sENVIRONMENT=web \
   -sEXPORTED_RUNTIME_METHODS=ccall,FS,emscriptenGetAudioObject
 em++ $OBJS -o $OUT/sapf-node.mjs $LINK -sENVIRONMENT=node -sEXPORTED_FUNCTIONS=$EXPORTS \
   -sEXPORTED_RUNTIME_METHODS=ccall,FS,HEAPF32
-echo "built $OUT/sapf.mjs and $OUT/sapf-node.mjs"
+# doctest's main runs on a pthread (PROXY_TO_PTHREAD), so tests may block and join threads;
+# the process exit code is the test result.
+TEST_OBJS=""; for f in $TEST_SRCS; do TEST_OBJS="$TEST_OBJS $OUT/obj/$(basename $f .cpp).o"; done
+em++ $OBJS $TEST_OBJS -o $OUT/test_sapf.js $BASE -sENVIRONMENT=node -sPROXY_TO_PTHREAD -sEXIT_RUNTIME
+echo "built $OUT/sapf.mjs, $OUT/sapf-node.mjs and $OUT/test_sapf.js"
