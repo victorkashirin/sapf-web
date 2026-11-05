@@ -37,7 +37,7 @@ BASE="-O2 -fexceptions -pthread -sUSE_LIBJPEG=1 -sALLOW_MEMORY_GROWTH -sINITIAL_
 # Sanitizers make Emscripten default to EXIT_RUNTIME, which shuts a main-less module down right
 # after start-up (killing the evaluation thread). Keep it running; test_sapf.js still checks leaks at exit.
 LINK="$BASE -sMODULARIZE -sEXPORT_ES6 --embed-file sapf-prelude.txt ${SANITIZE:+-sEXIT_RUNTIME=0}"
-EXPORTS=_sapf_init,_sapf_eval,_sapf_busy,_sapf_render,_sapf_num_playing,_malloc,_free
+EXPORTS=_sapf_init,_sapf_eval,_sapf_busy,_sapf_render,_sapf_num_playing,_sapf_set_ctl,_malloc,_free
 
 [ -n "$SANITIZE" ] || em++ $OBJS $OUT/obj/audio_worklet.o -o $OUT/sapf.mjs $LINK -sENVIRONMENT=web \
   -sAUDIO_WORKLET -sWASM_WORKERS -sEXPORTED_FUNCTIONS=$EXPORTS,_sapf_start_audio,_sapf_audio_node \

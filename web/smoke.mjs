@@ -111,6 +111,39 @@ const jpg = sapf.FS.readFile('/tmp/spec-60.jpg');
 assert.deepEqual([...jpg.subarray(0, 3)], [0xff, 0xd8, 0xff], 'sgram writes a JPEG');
 assert.doesNotMatch(sgramOut, /does not exist/, 'system() did not run on the host');
 
+// Page sliders: `xslider` tells the page about itself and returns a smoothed signal; sapf_set_ctl
+// moves it directly, even while the evaluation thread is blocked.
+let sliderCall;
+sapf.onSapfSlider = (...a) => { sliderCall = a; };
+const sliderFreq = async seconds => {
+  let n = 0, prev = 0;
+  const blocks = Math.round(seconds * SR / frames);
+  for (let b = 0; b < blocks; ++b) {
+    sapf._sapf_render(ptr, frames, ch);
+    for (const x of sapf.HEAPF32.subarray(ptr / 4, ptr / 4 + frames)) { if (prev < 0 && x >= 0) ++n; prev = x; }
+  }
+  return n * SR / (blocks * frames);
+};
+await evalSapf('clear "f" 100 1000 220 xslider 0 sinosc .3 * play');
+for (let i = 0; i < 100 && !sliderCall; ++i) await sleepMs(5);
+assert.deepEqual(sliderCall, [0, 'f', 100, 1000, 220, 1], 'xslider reports to the page');
+assert.ok(Math.abs(await sliderFreq(.5) - 220) <= 2, 'slider starts at its default');
+sapf.ccall('sapf_eval', null, ['string'], ['1 sleep\n']);
+await sleepMs(20);
+sapf._sapf_set_ctl(0, 880);
+await sliderFreq(.3); // let the 0.1 s lag settle
+const movedFreq = await sliderFreq(.5);
+assert.ok(sapf._sapf_busy() && Math.abs(movedFreq - 880) <= 2, `slider moved while eval slept: ${movedFreq}`);
+await idle();
+sliderCall = null;
+await evalSapf('"f" 100 500 300 xslider');
+for (let i = 0; i < 100 && !sliderCall; ++i) await sleepMs(5);
+assert.deepEqual(sliderCall, [0, 'f', 100, 500, 500, 1], 'running again keeps the position, clamped to the new range');
+assert.match(await evalSapf('"bad" 0 1 .5 xslider'), /non-zero/, 'xslider rejects a range through zero');
+sapf.ccall('sapf_eval', null, ['string'], ['clear stop\n']);
+for (let b = 0; b < 400 && sapf._sapf_num_playing(); ++b) { sapf._sapf_render(ptr, frames, ch); if (b % 4 === 3) await sleepMs(0); }
+await idle();
+
 console.log(`OK  unit-tests.txt ${unitRun}/${unitRun};  rms=${rms.toFixed(4)} freq≈${crossings}Hz  rendered 1s in ${ms.toFixed(1)}ms while eval slept; go works;` +
   ` >sf/sf> ok; record wrote ${recFrames} frames; sgram jpeg ${jpg.length} bytes`);
 process.exit(0); // pthread workers keep Node alive

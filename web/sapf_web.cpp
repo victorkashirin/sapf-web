@@ -6,12 +6,16 @@
 #include "ErrorCodes.hpp"
 #include <RtAudio.h>
 #include <emscripten/emscripten.h>
+#include <emscripten/threading.h>
 #include <locale.h>
+#include <algorithm>
 #include <atomic>
 #include <condition_variable>
 #include <deque>
+#include <map>
 #include <string>
 #include <thread>
+#include <vector>
 
 extern void AddCoreOps();
 extern void AddMathOps();
@@ -22,6 +26,7 @@ extern void AddRandomOps();
 extern void AddMidiOps();
 extern void AddOscOps();
 void loadFile(Thread& th, const char* filename);
+void zctl_(Thread& th, Prim* prim); // src/Midi.cpp
 
 // Ops like sgram, >sfo and prelude run `open <file>` through system(). A browser has nothing to
 // open, and under Node Emscripten's system() would run the command on the host shell, so refuse.
@@ -70,7 +75,48 @@ static void evalLoop(std::string preludeFile)
 	}
 }
 
+// Page sliders. Each name owns one ZRef for the session; `slider` returns its smoothed signal
+// (zctl) and the page writes it through sapf_set_ctl, so moves never wait for the eval queue.
+static std::mutex gCtlMutex;
+static std::map<std::string, int> gCtlIds; // entries are never removed, so key pointers stay valid
+static std::vector<P<ZRef>> gCtls;
+
+static void slider(Thread& th, bool exponential)
+{
+	const char* op = exponential ? "xslider" : "slider";
+	Z def = th.popFloat(op);
+	Z hi = th.popFloat(op);
+	Z lo = th.popFloat(op);
+	P<String> name = th.popString(op);
+	if (exponential && !(lo * hi > 0.)) { post("xslider : lo and hi must be non-zero with the same sign\n"); throw errOutOfRange; }
+	if (lo > hi) std::swap(lo, hi);
+	P<ZRef> ref;
+	int id;
+	const char* key;
+	{
+		std::lock_guard<std::mutex> lock(gCtlMutex);
+		auto [it, isNew] = gCtlIds.try_emplace(name->s, (int)gCtls.size());
+		if (isNew) gCtls.push_back(new ZRef(def));
+		id = it->second;
+		key = it->first.c_str();
+		ref = gCtls[id];
+		ref->z = std::clamp(ref->z, lo, hi); // re-running keeps the slider's position, within the new range
+	}
+	// Async so evaluation never waits on the page.
+	MAIN_THREAD_ASYNC_EM_ASM({ if (Module.onSapfSlider) Module.onSapfSlider($0, UTF8ToString($1), $2, $3, $4, $5); },
+		id, key, lo, hi, ref->z, (int)exponential);
+	th.push(ref);
+	zctl_(th, nullptr);
+}
+
 extern "C" {
+
+// Called by the page when a slider moves.
+EMSCRIPTEN_KEEPALIVE void sapf_set_ctl(int id, double value)
+{
+	std::lock_guard<std::mutex> lock(gCtlMutex);
+	if (id >= 0 && id < (int)gCtls.size()) gCtls[id]->z = value;
+}
 
 EMSCRIPTEN_KEEPALIVE void sapf_init(double sampleRate, const char* preludeFile)
 {
@@ -84,6 +130,11 @@ EMSCRIPTEN_KEEPALIVE void sapf_init(double sampleRate, const char* preludeFile)
 	AddMidiOps();
 	AddOscOps();
 	AddSetOps();
+	vm.addBifHelp("\n*** page sliders (web) ***");
+	vm.def("slider", 4, 1, [](Thread& th, Prim*) { slider(th, false); },
+		"(name lo hi default --> out) smoothed signal of a page slider with the linear range [lo,hi]. Running it again keeps the slider's position.");
+	vm.def("xslider", 4, 1, [](Thread& th, Prim*) { slider(th, true); },
+		"(name lo hi default --> out) smoothed signal of a page slider with the exponential range [lo,hi]. Running it again keeps the slider's position.");
 	gThread = new Thread();
 	gPending = 1; // the prelude
 	std::thread(evalLoop, std::string(preludeFile ? preludeFile : "")).detach();

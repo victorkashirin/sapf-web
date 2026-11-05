@@ -2,8 +2,10 @@
 
 This folder builds sapf to WebAssembly with Emscripten and runs it in a browser through Web Audio.
 It is a proof of concept. It adds shims, a web entry point and build scripts. The only changes
-to existing source files are fixes for bugs that AddressSanitizer found (see "AddressSanitizer");
-they apply to the desktop build too.
+to existing source files are fixes for bugs that AddressSanitizer found (see "AddressSanitizer"),
+which apply to the desktop build too, and two small changes in `src/Midi.cpp` for page sliders:
+`ZCtl` now starts from the ZRef's value instead of an uninitialised one, and `zctl_` is no
+longer `static`.
 
 ## Status
 
@@ -27,6 +29,19 @@ What works:
   through its writer thread. Files live in Emscripten's in-memory file system; recordings go to
   `/tmp` as on the desktop.
 - `sgram` writes spectrogram JPEGs through libjpeg (to `/tmp`).
+- Page sliders (web only): `name lo hi default slider` (linear) and `xslider` (exponential) add a
+  slider under the editor and return its smoothed signal, e.g.
+  `"freq" 100 2000 440 xslider 0 sinosc "amp" 0 1 .3 slider * play`. Each name keeps one slider for
+  the session; running the code again keeps its position, clamped to the new range. Sliders write
+  the value straight to a ZRef (`sapf_set_ctl`), so they respond while the evaluation thread is busy.
+  Sliders are never removed until the page is reloaded.
+  To name a slider for reuse, store a function, not its signal:
+  `\["freq" 100 2000 440 xslider] = freq` then `freq 0 sinosc freq 1.5 * 0 sinosc + .2 * play`.
+  Each use reads the same slider afresh. Storing the signal (`... xslider = f`) works inside one
+  expression, but `f` keeps everything the slider ever produced in memory, and playing `f` again
+  later replays old slider moves before it catches up. The "Add slider" button inserts such a
+  definition (`\["ctl1" 0 1 .5 slider] = ctl1`) on a new line above the cursor's line and runs it,
+  so `ctl1` can be used right away.
 - Tests that passed:
   - `node web/smoke.mjs` (Node plays the audio thread's role):
     - all 369 of sapf's own language tests in `unit-tests.txt` pass. The test lists any that
@@ -42,6 +57,9 @@ What works:
     - `>sf` writes a WAV of the expected size, and `sf>` reads back the exact samples
     - `record` writes every rendered frame (25,600 of 25,600), and the file holds the sine
     - `sgram` writes a valid JPEG, and its `open` call does not reach the host shell
+    - `xslider` reports its name, range and value to the page and plays its default (220 Hz);
+      `sapf_set_ctl` moves it to 880 Hz while the evaluation thread is in `1 sleep`; running it
+      again with a smaller range keeps the position, clamped; a range through zero is an error
   - In the browser (Chromium), through the Wasm Audio Worklet:
     - `[300 1200] 0 sinosc .3 * play` gives 300 Hz on the left channel and 1200 Hz on the
       right, both at the expected level
@@ -57,6 +75,8 @@ What works:
       never showed a step larger than the playing sine's own, and each `stop` finished in
       9–14 ms
     - syntax errors are printed to the page log, and the console shows no errors
+    - the slider example adds `freq` and `amp` sliders; after dragging them, the output pitch
+      (766 Hz) matched the `freq` slider (767.3)
   - `node web/build/test_sapf.js`: sapf's C++ doctest suite (`test/*.cpp`) passes on wasm:
     29 of 29 test cases, 9,974,926 assertions, in about 7 seconds. It covers math ops,
     oscillator UGens, stream ops, MIDI packets, sound files (libsndfile, resampling),

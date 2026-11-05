@@ -928,7 +928,7 @@ struct ZCtl : public ZeroInputUGen<ZCtl>
 	
 	ZCtl(Thread& th, P<ZRef> const& inZRef)
         : ZeroInputUGen<ZCtl>(th, false), _b1(1. + gMidiLagMul * th.rate.invSampleRate),
-        zref(inZRef)
+        _y1(inZRef->z), zref(inZRef)
 	{
 	}
 	
@@ -947,7 +947,7 @@ struct ZCtl : public ZeroInputUGen<ZCtl>
 	}
 };
 
-static void zctl_(Thread& th, Prim* prim)
+void zctl_(Thread& th, Prim* prim) // not static: web/sapf_web.cpp's sliders reuse it
 {
 	P<ZRef> zref = th.popZRef("zctl : zref");
 
