@@ -1,6 +1,6 @@
 // Tests for sapf-text.mjs: node web/sapf-text.test.mjs
 import assert from 'node:assert/strict';
-import { lineAt, blockAt, paragraphAt, formatSapf, parseHelp } from './sapf-text.mjs';
+import { lineAt, blockAt, paragraphAt, formatSapf, parseHelp, playsSound } from './sapf-text.mjs';
 
 const t = 'a 1\n(\n  440 0 sinosc\n  (2 *) play\n)\n\nb 2\nc 3';
 const at = s => t.indexOf(s);
@@ -26,6 +26,13 @@ assert.equal(paragraphAt(t, at('\n\n') + 1).code, '', 'blank line: the (empty) l
 assert.equal(formatSapf('(\n440   0 sinosc\n[1\n2]\n;; c\n)'), '(\n  440 0 sinosc\n  [1\n    2]\n  ;; c\n)');
 // strings and comments keep their spacing and their brackets don't indent; a line inside a string stays put
 assert.equal(formatSapf('  "a  (b"   pr ; x  (\n1   2\n"s\n   t" ( \n3'), '"a  (b" pr ; x  (\n1 2\n"s\n   t" (\n  3');
+
+assert.ok(playsSound('440 0 sinosc .3 * play'));
+assert.ok(playsSound('[1 2] "x.wav" record\n'));
+assert.ok(playsSound('(x play)'));
+assert.ok(!playsSound('1 2 + ; play later'), 'comment');
+assert.ok(!playsSound('"play" pr'), 'string');
+assert.ok(!playsSound('player playx 1 2 +'), 'other words');
 
 const help = `BUILT IN FUNCTIONS
 

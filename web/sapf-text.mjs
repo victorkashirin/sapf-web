@@ -65,6 +65,13 @@ export function paragraphAt(text, from, to = from) {
   return { from: start, to: end, code: text.slice(start, end).trim() };
 }
 
+// Whether code calls `play` or `record` (outside strings and comments), so evaluating it starts a sound.
+// shortcut: a function that plays, called by name, isn't seen; would need sapf to report new players.
+export function playsSound(code) {
+  const kind = scan(code);
+  return [...code.matchAll(/(?<=^|[\s()[\]{}])(play|record)(?=$|[\s()[\]{};"])/g)].some(m => kind[m.index] === CODE);
+}
+
 // Collapses runs of spaces and indents by bracket depth, 2 spaces per level (extension's formatSapfCode).
 // Strings and comments are left as they are, and their brackets don't count; a line that starts inside
 // a string is not re-indented.

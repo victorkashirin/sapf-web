@@ -205,6 +205,9 @@ The keys follow vs-sapf:
 | Shift+Alt+F | format (vs-sapf uses Cmd/Ctrl+Shift+I, which opens the browser's devtools) |
 
 Hovering a word shows its documentation; completion offers built-ins and prelude functions.
+With "Replace sound" checked (the default), evaluating code that calls `play` or `record` stops the
+current sound first, so there's no need for Cmd/Ctrl+. between takes. It looks for those words in the
+evaluated text only, so calling a function that plays (`\[... play] = f`, then `f`) doesn't replace.
 
 ## Deploying
 

@@ -6,8 +6,8 @@ import { Decoration, hoverTooltip, keymap } from '@codemirror/view';
 import { StreamLanguage, LanguageSupport } from '@codemirror/language';
 import { completionStatus } from '@codemirror/autocomplete';
 import docs from './build/sapf-docs.json';
-import { lineAt, blockAt, paragraphAt, formatSapf } from './sapf-text.mjs';
-export { lineAt }; // for the page's Run button
+import { lineAt, blockAt, paragraphAt, formatSapf, playsSound } from './sapf-text.mjs';
+export { lineAt, playsSound }; // for the page's Run button and replace option
 
 const byName = new Map(docs.map(d => [d.name, d]));
 const WORD = /[^\s()[\]{}";]/; // sapf words include operators: + *, >sf, sf>, +/ ...
