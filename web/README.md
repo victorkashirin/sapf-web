@@ -45,7 +45,7 @@ What works:
   `\["freq" 100 2000 440 xslider] = freq` then `freq 0 sinosc freq 1.5 * 0 sinosc + .2 * play`.
   Each use reads the same slider afresh. Storing the signal (`... xslider = f`) works inside one
   expression, but `f` keeps everything the slider ever produced in memory, and playing `f` again
-  later replays old slider moves before it catches up. The "Add slider" button inserts such a
+  later replays old slider moves before it catches up. The "Add control" button inserts such a
   definition (`\["ctl1" 0 1 .5 slider] = ctl1`) on a new line above the cursor's line and runs it,
   so `ctl1` can be used right away.
 - Tests that passed:
@@ -155,7 +155,7 @@ main thread (index.html)        eval thread (pthread)          audio thread (Was
 | `smoke.mjs` | Node test (assert-based), using `build/sapf-node.mjs` (or `SAPF_NODE_MODULE`). Also runs `unit-tests.txt`. |
 | `run-examples.mjs` | Runs every example in `sapf-examples.txt` on a Node build, rendering audio for the ones that play. Stops at the first sanitizer report. |
 | `serve.py` | Dev server with the cross-origin isolation headers. |
-| `index.html` | The page: editor and console side by side, File menu, Run/Stop/Add slider buttons, page sliders, About dialog. |
+| `index.html` | The page: editor and console side by side, File menu, Run/Stop/Add control buttons, page sliders, About dialog. |
 | `editor.js` | The page's code editor: CodeMirror 6 with the features of the [vs-sapf](https://github.com/victorkashirin/vs-sapf) VS Code extension (highlighting, hover docs, completion, line/block/paragraph evaluation, formatting). `npm run build` (in `web/`, called by `build.sh`) bundles it with esbuild into `build/editor.js`. |
 | `sapf-text.mjs` | Text logic ported from vs-sapf: the line, `( )` block and paragraph under the cursor, the formatter, and the `helpall` parser. Tested by `sapf-text.test.mjs`. |
 | `gen-docs.mjs` | Runs `helpall` on `build/sapf-node.mjs` and writes `build/sapf-docs.json`, the editor's hover and completion docs, so they always match the built-ins and the prelude. |
