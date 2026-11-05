@@ -3,7 +3,8 @@
 import { EditorView, basicSetup } from 'codemirror';
 import { EditorState, Prec, StateEffect, StateField } from '@codemirror/state';
 import { Decoration, hoverTooltip, keymap } from '@codemirror/view';
-import { StreamLanguage, LanguageSupport } from '@codemirror/language';
+import { StreamLanguage, LanguageSupport, HighlightStyle, syntaxHighlighting } from '@codemirror/language';
+import { tags as t } from '@lezer/highlight';
 import { completionStatus } from '@codemirror/autocomplete';
 import docs from './build/sapf-docs.json';
 import { lineAt, blockAt, paragraphAt, formatSapf, playsSound } from './sapf-text.mjs';
@@ -78,8 +79,8 @@ const flashField = StateField.define({
   provide: f => EditorView.decorations.from(f),
 });
 
-// run(code) evaluates code in sapf. Returns the EditorView.
-export function createEditor(parent, doc, run) {
+// run(code) evaluates code in sapf; onChange(text), if given, gets the text after each edit. Returns the EditorView.
+export function createEditor(parent, doc, run, onChange) {
   let flashTimer;
   const evalWith = pick => view => {
     const { from, to } = view.state.selection.main;
@@ -120,19 +121,55 @@ export function createEditor(parent, doc, run) {
           { key: 'Mod-Shift-.', run: send('clear') },
           { key: 'Shift-Alt-f', run: format }, // the extension's Cmd/Ctrl+Shift+I opens devtools in browsers
         ])),
+        // On a Mac, Option+Shift+F types "Ï", and the keymap above never maps an Option-only combo back to
+        // its key (Option is how Mac users type characters), so match the physical key instead.
+        Prec.highest(EditorView.domEventHandlers({
+          keydown: (e, view) => e.altKey && e.shiftKey && !e.metaKey && !e.ctrlKey && e.code === 'KeyF'
+            && (e.preventDefault(), format(view)),
+        })),
         basicSetup,
         new LanguageSupport(sapfLang, sapfLang.data.of({ autocomplete: complete })),
         hover,
         flashField,
-        EditorView.theme({
-          '&': { border: '1px solid #ccc', fontSize: '14px' },
-          '.cm-scroller': { fontFamily: 'inherit' },
-          '.cm-content, .cm-gutter': { minHeight: '160px' },
-          '.sapf-flash': { backgroundColor: '#ffe58a' },
-          '.sapf-doc': { padding: '4px 8px', maxWidth: '520px', whiteSpace: 'pre-wrap' },
-          '.sapf-doc-cat': { color: '#888', margin: '2px 0' },
-        }),
+        theme,
+        syntaxHighlighting(highlight),
+        EditorView.updateListener.of(u => { if (u.docChanged && onChange) onChange(u.state.doc.toString()); }),
       ],
     }),
   });
 }
+
+// Dark "screen" look; the page draws the bezel around it.
+const theme = EditorView.theme({
+  '&': { height: '100%', fontSize: '14px', color: '#c8ccd2', backgroundColor: 'transparent' },
+  '&.cm-focused': { outline: 'none' },
+  '.cm-scroller': { fontFamily: 'inherit', lineHeight: '1.55' },
+  '.cm-content': { caretColor: '#ffb454', padding: '10px 0' },
+  '.cm-cursor, .cm-dropCursor': { borderLeft: '2px solid #ffb454' },
+  '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection':
+    { backgroundColor: '#2c3a4d' },
+  '.cm-gutters': { backgroundColor: 'transparent', color: '#4a5059', border: 'none', borderRight: '1px solid #23272d' },
+  '.cm-activeLine': { backgroundColor: '#ffffff08' },
+  '.cm-activeLineGutter': { backgroundColor: 'transparent', color: '#9aa1ab' },
+  '.cm-matchingBracket, &.cm-focused .cm-matchingBracket': { backgroundColor: '#ffb45426', outline: 'none' },
+  '.cm-searchMatch': { backgroundColor: '#ffb45433' },
+  '.cm-panels': { backgroundColor: '#1a1d21', color: '#c8ccd2' },
+  '.cm-tooltip': { backgroundColor: '#1e2126', color: '#c8ccd2', border: '1px solid #343a42', borderRadius: '4px',
+    boxShadow: '0 6px 18px #000a' },
+  '.cm-tooltip-autocomplete > ul > li[aria-selected]': { backgroundColor: '#2c3a4d', color: '#fff' },
+  '.sapf-flash': { backgroundColor: '#ffb45455' },
+  '.sapf-doc': { padding: '4px 8px', maxWidth: '520px', whiteSpace: 'pre-wrap' },
+  '.sapf-doc-cat': { color: '#7d848e', margin: '2px 0' },
+}, { dark: true });
+
+const highlight = HighlightStyle.define([
+  { tag: t.keyword, color: '#ffb454' },
+  { tag: t.string, color: '#a6d189' },
+  { tag: t.number, color: '#79c0ff' },
+  { tag: t.comment, color: '#5c636d', fontStyle: 'italic' },
+  { tag: t.atom, color: '#d2a8ff' },
+  { tag: t.operator, color: '#ff7b72' },
+  { tag: t.bracket, color: '#7d848e' },
+  { tag: t.definition(t.variableName), color: '#f2cc60' },
+  { tag: t.variableName, color: '#c8ccd2' },
+]);
