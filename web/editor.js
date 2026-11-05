@@ -79,7 +79,8 @@ const flashField = StateField.define({
   provide: f => EditorView.decorations.from(f),
 });
 
-// run(code) evaluates code in sapf; onChange(text), if given, gets the text after each edit. Returns the EditorView.
+// run(code) evaluates code in sapf; onChange(text), if given, gets the text after each edit. Returns the EditorView,
+// with setDoc(text): replaces the text and the undo history (so undo can't bring back another file), without onChange.
 export function createEditor(parent, doc, run, onChange) {
   let flashTimer;
   const evalWith = pick => view => {
@@ -104,39 +105,39 @@ export function createEditor(parent, doc, run, onChange) {
     if (changes.length) view.dispatch({ changes });
     return true;
   };
-  return new EditorView({
-    parent,
-    state: EditorState.create({
-      doc,
-      extensions: [
-        // Highest precedence: Mod-Enter is "insert blank line" in the default keymap.
-        Prec.highest(keymap.of([
-          { key: 'Mod-Enter', run: evalWith(lineAt) },
-          { key: 'Shift-Enter', run: evalWith(blockAt) },
-          { key: 'Mod-Shift-Enter', run: evalWith(paragraphAt) },
-          { key: 'Mod-.', run: send('stop') },
-          // Esc stops unless it is closing the completion popup. Returning false lets the default Esc
-          // (collapse the selection) run too, which would otherwise swallow the key when text is selected.
-          { key: 'Escape', run: view => { if (!completionStatus(view.state)) run('stop'); return false; } },
-          { key: 'Mod-Shift-.', run: send('clear') },
-          { key: 'Shift-Alt-f', run: format }, // the extension's Cmd/Ctrl+Shift+I opens devtools in browsers
-        ])),
-        // On a Mac, Option+Shift+F types "Ï", and the keymap above never maps an Option-only combo back to
-        // its key (Option is how Mac users type characters), so match the physical key instead.
-        Prec.highest(EditorView.domEventHandlers({
-          keydown: (e, view) => e.altKey && e.shiftKey && !e.metaKey && !e.ctrlKey && e.code === 'KeyF'
-            && (e.preventDefault(), format(view)),
-        })),
-        basicSetup,
-        new LanguageSupport(sapfLang, sapfLang.data.of({ autocomplete: complete })),
-        hover,
-        flashField,
-        theme,
-        syntaxHighlighting(highlight),
-        EditorView.updateListener.of(u => { if (u.docChanged && onChange) onChange(u.state.doc.toString()); }),
-      ],
-    }),
-  });
+  const extensions = [
+    // Highest precedence: Mod-Enter is "insert blank line" in the default keymap.
+    Prec.highest(keymap.of([
+      { key: 'Mod-Enter', run: evalWith(lineAt) },
+      { key: 'Shift-Enter', run: evalWith(blockAt) },
+      { key: 'Mod-Shift-Enter', run: evalWith(paragraphAt) },
+      { key: 'Mod-.', run: send('stop') },
+      // Esc stops unless it is closing the completion popup. Returning false lets the default Esc
+      // (collapse the selection) run too, which would otherwise swallow the key when text is selected.
+      { key: 'Escape', run: view => { if (!completionStatus(view.state)) run('stop'); return false; } },
+      { key: 'Mod-Shift-.', run: send('clear') },
+      { key: 'Shift-Alt-f', run: format }, // the extension's Cmd/Ctrl+Shift+I opens devtools in browsers
+    ])),
+    // On a Mac, Option+Shift+F types "Ï", and the keymap above never maps an Option-only combo back to
+    // its key (Option is how Mac users type characters), so match the physical key instead.
+    Prec.highest(EditorView.domEventHandlers({
+      keydown: (e, view) => e.altKey && e.shiftKey && !e.metaKey && !e.ctrlKey && e.code === 'KeyF'
+        && (e.preventDefault(), format(view)),
+    })),
+    basicSetup,
+    new LanguageSupport(sapfLang, sapfLang.data.of({ autocomplete: complete })),
+    hover,
+    flashField,
+    theme,
+    syntaxHighlighting(highlight),
+    EditorView.updateListener.of(u => { if (u.docChanged && onChange) onChange(u.state.doc.toString()); }),
+  ];
+  const view = new EditorView({ parent, state: EditorState.create({ doc, extensions }) });
+  view.setDoc = text => {
+    view.setState(EditorState.create({ doc: text, extensions }));
+    view.scrollDOM.scrollTo(0, 0); // setState keeps the old scroll position
+  };
+  return view;
 }
 
 // Dark "screen" look; the page draws the bezel around it.

@@ -150,7 +150,7 @@ main thread (index.html)        eval thread (pthread)          audio thread (Was
 | `smoke.mjs` | Node test (assert-based), using `build/sapf-node.mjs` (or `SAPF_NODE_MODULE`). Also runs `unit-tests.txt`. |
 | `run-examples.mjs` | Runs every example in `sapf-examples.txt` on a Node build, rendering audio for the ones that play. Stops at the first sanitizer report. |
 | `serve.py` | Dev server with the cross-origin isolation headers. |
-| `index.html` | The page: editor and console side by side, Run/Stop/Add slider buttons, page sliders, About dialog. |
+| `index.html` | The page: editor and console side by side, File menu, Run/Stop/Add slider buttons, page sliders, About dialog. |
 | `editor.js` | The page's code editor: CodeMirror 6 with the features of the [vs-sapf](https://github.com/victorkashirin/vs-sapf) VS Code extension (highlighting, hover docs, completion, line/block/paragraph evaluation, formatting). `npm run build` (in `web/`, called by `build.sh`) bundles it with esbuild into `build/editor.js`. |
 | `sapf-text.mjs` | Text logic ported from vs-sapf: the line, `( )` block and paragraph under the cursor, the formatter, and the `helpall` parser. Tested by `sapf-text.test.mjs`. |
 | `gen-docs.mjs` | Runs `helpall` on `build/sapf-node.mjs` and writes `build/sapf-docs.json`, the editor's hover and completion docs, so they always match the built-ins and the prelude. |
@@ -204,6 +204,10 @@ The keys follow vs-sapf:
 | Cmd/Ctrl+Shift+. | `clear` (also clears the console) |
 | Shift+Alt+F | format (vs-sapf uses Cmd/Ctrl+Shift+I, which opens the browser's devtools) |
 | Ctrl+Space (Mac: also Option+` or Option+I) | open completion, even with nothing typed |
+
+The File menu keeps named files in the browser's local storage: type a name and Save, then each
+edit saves the file. New and the two example files (`sapf-examples.txt`, `sapf-bif-examples.txt`, which
+`npm run build` copies into `build/`) open an unsaved text; leaving it once edited asks first.
 
 Hovering a word shows its documentation; completion offers built-ins and prelude functions.
 With "Replace sound" checked (the default), evaluating code that calls `play` or `record` stops the

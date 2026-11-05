@@ -3,6 +3,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark">
 <title>sapf web</title>
+<link rel="icon" href="favicon.png">
 <style>
   :root {
     --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
@@ -37,16 +38,45 @@
   dialog .actions { text-align: right; margin-bottom: 0; }
 
   /* plastic keycaps */
-  button {
+  button, .btn {
     font: 12px var(--mono); color: #d6d9de; padding: 5px 12px; cursor: pointer;
     border: 1px solid #0009; border-radius: 5px;
     background: linear-gradient(#4a4e55, #33363b);
     box-shadow: inset 0 1px 0 #ffffff26, 0 2px 0 #131518, 0 3px 6px #0007;
     text-shadow: 0 -1px 0 #0008;
   }
-  button:hover { background: linear-gradient(#52565e, #383b41); }
-  button:active { transform: translateY(2px); background: linear-gradient(#36393e, #303338); box-shadow: inset 0 1px 2px #0008, 0 0 0 #131518; }
+  button:hover, .btn:hover { background: linear-gradient(#52565e, #383b41); }
+  button:active, .btn:active { transform: translateY(2px); background: linear-gradient(#36393e, #303338); box-shadow: inset 0 1px 2px #0008, 0 0 0 #131518; }
   #run { color: var(--amber); }
+
+  /* File menu: a <details> dropdown */
+  .menu { position: relative; }
+  .menu summary { list-style: none; }
+  .menu summary::-webkit-details-marker { display: none; }
+  .menu summary::after { content: " ▾"; color: var(--dim); }
+  .menu .pop {
+    position: absolute; z-index: 10; top: calc(100% + 8px); left: 0; width: 260px; max-height: 70vh; overflow: auto;
+    padding: 6px; border-radius: 8px; background: linear-gradient(#2e3136, #222428);
+    box-shadow: inset 0 1px 0 #ffffff14, 0 14px 34px #000c, 0 0 0 1px #000;
+  }
+  .pop .row { display: flex; gap: 6px; padding: 4px; }
+  .pop input {
+    flex: 1; min-width: 0; font: 12px var(--mono); color: var(--text); padding: 4px 8px; border: 0; border-radius: 4px;
+    background: #121417; box-shadow: inset 0 1px 3px #000;
+  }
+  .pop .item, .pop .del {
+    display: block; width: 100%; text-align: left; padding: 5px 8px; border: 0; border-radius: 4px;
+    background: none; box-shadow: none; transform: none; color: var(--text); text-shadow: none;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .pop .item:hover, .pop .item:focus-visible { background: #ffffff10; color: var(--amber); }
+  .pop .item.cur { color: var(--amber); }
+  .pop .file { display: flex; }
+  .pop .del { flex: none; width: auto; color: var(--dim); }
+  .pop .del:hover, .pop .del:focus-visible { background: none; color: var(--red); }
+  .pop .tag { padding: 8px 8px 4px; }
+  .pop .none { color: var(--dim); padding: 2px 8px 4px; }
+  #fileLabel { color: var(--dim); letter-spacing: .1em; text-transform: none; }
   #stop { color: var(--red); }
 
   /* LED toggle */
@@ -120,6 +150,18 @@
 </style>
 <header>
   <span class="brand">sapf<small>wasm</small></span>
+  <details class="menu" id="fileMenu">
+    <summary class="btn">File</summary>
+    <div class="pop">
+      <div class="row"><input id="fileName" placeholder="name" aria-label="File name" spellcheck="false"><button id="save">Save</button></div>
+      <button class="item" id="new">New</button>
+      <div class="tag">saved</div>
+      <div id="fileList"></div>
+      <div class="tag">examples</div>
+      <button class="item" data-example="sapf-examples.txt">sapf examples</button>
+      <button class="item" data-example="sapf-bif-examples.txt">built-in function examples</button>
+    </div>
+  </details>
   <button id="run">Run</button><button id="stop">Stop</button><button id="addSlider">Add slider</button>
   <label class="led"><input type="checkbox" id="replace" checked> Replace sound</label>
   <button id="about" class="round" title="About" aria-label="About">?</button>
@@ -137,7 +179,7 @@
   </div>
 </dialog>
 <main>
-  <section class="panel"><div class="tag">editor</div><div class="screen" id="code"></div></section>
+  <section class="panel"><div class="tag">editor <span id="fileLabel"></span></div><div class="screen" id="code"></div></section>
   <div class="split" id="split" role="separator" tabindex="0" aria-label="Resize editor and console"
     aria-orientation="vertical" aria-valuemin="15" aria-valuemax="85" aria-valuenow="50"></div>
   <section class="panel"><div class="tag">console</div><div id="controls"></div><pre class="screen" id="log"></pre></section>
@@ -225,11 +267,89 @@ const evalCode = src => {
 // site data off): then the page just starts fresh each time.
 const store = {
   get: k => { try { return localStorage.getItem('sapf-web:' + k); } catch { return null; } },
-  set: (k, v) => { try { localStorage.setItem('sapf-web:' + k, v); } catch {} },
+  set: (k, v) => { try { localStorage.setItem('sapf-web:' + k, v); return true; } catch { return false; } },
+  del: k => { try { localStorage.removeItem('sapf-web:' + k); } catch {} },
+  keys: prefix => { try { return Object.keys(localStorage).filter(k => k.startsWith('sapf-web:' + prefix)).map(k => k.slice(9 + prefix.length)); } catch { return []; } },
 };
+
+// Files: named texts in browser storage ('file:<name>'), saved on every edit. Otherwise the editor holds a
+// scratch text (the welcome text, New, an example) kept only in 'code'; leaving it once edited asks first.
+let buf; // { file } or { title, dirty }
+try { buf = JSON.parse(store.get('buf')); } catch {}
+const welcome = document.getElementById('example').textContent;
+buf ??= { title: 'untitled', dirty: (store.get('code') ?? welcome) !== welcome }; // text from before files existed
+if (buf.file && store.get('file:' + buf.file) === null) buf = { title: buf.file, dirty: true }; // deleted elsewhere
+const fileLabel = document.getElementById('fileLabel');
+const showBuf = () => {
+  fileLabel.textContent = '· ' + (buf.file ?? buf.title + (buf.dirty ? ' (unsaved)' : ''));
+  store.set('buf', JSON.stringify(buf));
+};
+let warned = false;
 const editor = createEditor(document.getElementById('code'),
-  store.get('code') ?? document.getElementById('example').textContent, evalCode, text => store.set('code', text));
+  store.get('code') ?? welcome, evalCode, text => {
+    if (!store.set('code', text) && !warned) { warned = true; print('Browser storage is full or blocked: edits are not saved.', 'err'); }
+    if (buf.file) store.set('file:' + buf.file, text);
+    else if (!buf.dirty) { buf.dirty = true; showBuf(); }
+  });
+showBuf();
 editor.focus();
+
+const fileMenu = document.getElementById('fileMenu'), fileName = document.getElementById('fileName');
+const closeMenu = () => { fileMenu.open = false; editor.focus(); };
+function openText(text, next) {
+  if (buf.dirty && !confirm(`Discard the unsaved changes to "${buf.title}"?`)) return;
+  buf = next;
+  editor.setDoc(text);
+  store.set('code', text);
+  showBuf();
+  closeMenu();
+}
+function save() {
+  const name = fileName.value.trim(), text = editor.state.doc.toString();
+  if (!name) return fileName.focus();
+  if (name !== buf.file && store.get('file:' + name) !== null && !confirm(`Replace the saved "${name}"?`)) return;
+  if (!store.set('file:' + name, text)) return print(`Could not save "${name}": browser storage is full or blocked.`, 'err');
+  buf = { file: name };
+  showBuf();
+  closeMenu();
+}
+document.getElementById('save').onclick = save;
+fileName.onkeydown = e => e.key === 'Enter' && save();
+document.getElementById('new').onclick = () => openText('', { title: 'untitled', dirty: false });
+for (const b of fileMenu.querySelectorAll('[data-example]')) b.onclick = async () => {
+  const r = await fetch('build/' + b.dataset.example);
+  if (!r.ok) return print(`Could not load ${b.dataset.example} (${r.status})`, 'err');
+  openText(await r.text(), { title: b.textContent, dirty: false });
+};
+// The saved list is rebuilt each time the menu opens.
+fileMenu.ontoggle = () => {
+  if (!fileMenu.open) return;
+  fileName.value = buf.file ?? '';
+  const list = document.getElementById('fileList'), names = store.keys('file:').sort();
+  list.replaceChildren();
+  if (!names.length) list.innerHTML = '<div class="none">nothing saved yet</div>';
+  for (const name of names) {
+    const row = document.createElement('div');
+    row.className = 'file';
+    row.innerHTML = '<button class="item"></button><button class="del">×</button>';
+    const [open, del] = row.children;
+    open.textContent = name;
+    open.classList.toggle('cur', name === buf.file);
+    open.onclick = () => openText(store.get('file:' + name) ?? '', { file: name });
+    del.title = `Delete "${name}"`;
+    del.setAttribute('aria-label', del.title);
+    del.onclick = () => {
+      if (!confirm(`Delete "${name}"?`)) return;
+      store.del('file:' + name);
+      if (name === buf.file) { buf = { title: name, dirty: true }; showBuf(); } // its text stays in the editor, unsaved
+      row.remove();
+    };
+    list.append(row);
+  }
+  fileName.focus();
+};
+document.addEventListener('click', e => fileMenu.open && !fileMenu.contains(e.target) && (fileMenu.open = false));
+fileMenu.onkeydown = e => e.key === 'Escape' && closeMenu();
 document.getElementById('run').onclick = () => {
   const { from, to } = editor.state.selection.main;
   evalCode(lineAt(editor.state.doc.toString(), from, to).code);

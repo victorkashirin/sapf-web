@@ -57,8 +57,8 @@ jobs:
       - name: Assemble site
         run: |
           mkdir -p web/dist/build
-          cp web/index.html web/_headers web/dist/
-          cp web/build/sapf.mjs web/build/sapf.wasm web/build/editor.js web/dist/build/
+          cp web/index.html web/_headers web/favicon.png web/dist/
+          cp web/build/sapf.mjs web/build/sapf.wasm web/build/editor.js web/build/sapf-examples.txt web/build/sapf-bif-examples.txt web/dist/build/
           # GPL: the source links (header, About) point at the exact commit being deployed, not at main.
           sed -i "s|href=\"https://github.com/$GITHUB_REPOSITORY\">|href=\"https://github.com/$GITHUB_REPOSITORY/tree/$GITHUB_SHA\">|g" web/dist/index.html
           grep -q "tree/$GITHUB_SHA\">" web/dist/index.html
