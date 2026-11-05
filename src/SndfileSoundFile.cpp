@@ -217,6 +217,8 @@ int SndfileSoundFile::pull(uint32_t *framesRead, PortableBuffers& buffers) {
 }
 
 void SndfileSoundFile::write(const int numFrames, const PortableBuffers& bufs) const {
+	// >sf's last pull can be empty when the signal ends on a buffer boundary; that is not a failure
+	if (numFrames <= 0) return;
 	if (const auto written{sf_write_float(mSndfile, (const float*) bufs.buffers[0].data, numFrames * bufs.buffers[0].numChannels)}; written <= 0) {
 		const auto error{sf_strerror(mSndfile)};
 		printf("failed to write audio data to file - %s\n", error);

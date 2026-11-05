@@ -5,7 +5,9 @@ It is a proof of concept. It adds shims, a web entry point and build scripts. Th
 to existing source files are fixes for bugs that AddressSanitizer found (see "AddressSanitizer"),
 which apply to the desktop build too, and two small changes in `src/Midi.cpp` for page sliders:
 `ZCtl` now starts from the ZRef's value instead of an uninitialised one, and `zctl_` is no
-longer `static`.
+longer `static`. `src/UGen.cpp` also builds the mouse UGens under Emscripten, and
+`src/SndfileSoundFile.cpp` no longer reports an empty write as a failure (`>sf` printed
+"failed to write audio data to file - No Error" when the signal ended on a buffer boundary).
 
 ## Status
 
@@ -29,6 +31,10 @@ What works:
   through its writer thread. Files live in Emscripten's in-memory file system; recordings go to
   `/tmp` as on the desktop.
 - `sgram` writes spectrogram JPEGs through libjpeg (to `/tmp`).
+- "Open" means download: `>sfo`, `sgram` and `prelude` run `system("open <file>")`; the web build
+  runs no command and instead hands the file to the page, which downloads it.
+- Mouse UGens (`mousex`, `mousey`, `xmousex`, `xmousey` and their `1` forms) follow the pointer
+  over the page window, clamped to [0,1] (y is 1 at the top), instead of the whole screen as on the desktop.
 - Page sliders (web only): `name lo hi default slider` (linear) and `xslider` (exponential) add a
   slider under the editor and return its smoothed signal, e.g.
   `"freq" 100 2000 440 xslider 0 sinosc "amp" 0 1 .3 slider * play`. Each name keeps one slider for
@@ -88,12 +94,11 @@ What does not work yet:
 
 | Feature | Status | Why / how to fix |
 |---|---|---|
-| Getting files in and out of the browser | No UI | Recordings, `>sf` output and spectrograms are written to the in-memory file system and are lost on reload. The page has no way to download them or to load your own sound files yet. From devtools: `sapf.FS.readFile('/tmp/name.wav')`. Fix: download links, file upload, IDBFS for persistence. |
+| Getting files in and out of the browser | Partly | `>sfo` and `sgram` put a download link in the console, and download at once if the key press that ran the code still counts as a user action (Chrome: about 5 s), so Chrome does not ask about repeated downloads. `>sf` and `record` output stays in the in-memory file system and is lost on reload, and there is no way to load your own sound files yet. From devtools: `sapf.FS.readFile('/tmp/name.wav')`. Fix: download links, file upload, IDBFS for persistence. |
 | Compressed sound files (FLAC, Ogg, Opus, MP3) | Not supported | libsndfile is built without external codec libraries (`-DENABLE_EXTERNAL_LIBS=OFF`). WAV, AIFF and the other uncompressed formats work. |
 | MIDI | No ports | `shim/RtMidi.h` reports zero ports. Could be bridged to Web MIDI. |
 | OSC | Off | Browsers have no UDP. |
-| Mouse UGens | Off | They are Carbon-only on desktop too. Could be fed from pointer events. |
-| `prelude`, `examples`, `readme`, `logfile` ops; "open after write" (`>sfo`, `sgram`) | No-op | They call `system("open …")`, which the web build refuses (see `sapf_web.cpp`). |
+| `examples`, `readme`, `logfile` ops | No-op | They have no file to open on the web. |
 | Line editing and history | Not needed | The page sends code through `sapf_eval`. |
 
 Known limits of the current approach:
@@ -140,7 +145,7 @@ main thread (index.html)        eval thread (pthread)          audio thread (Was
 
 | File | Purpose |
 |---|---|
-| `sapf_web.cpp` | Replaces `src/main.cpp`. Overrides `system()` to do nothing: sapf ops run `open <file>` through it, and under Node Emscripten's `system()` would run that on the host shell. Exports `sapf_init(sampleRate, preludePath)` (starts the evaluation thread, which loads the prelude), `sapf_eval(code)` (queues code and returns at once), `sapf_busy()` (non-zero while code is queued or running), `sapf_render(out, frames, channels)` and `sapf_num_playing()`. |
+| `sapf_web.cpp` | Replaces `src/main.cpp`. Overrides `system()` so it never runs a command (under Node Emscripten's `system()` would use the host shell); `open <file>` instead calls the page's `onSapfOpen`, which downloads the file. Exports `sapf_set_mouse(x, y)` for the mouse UGens. Exports `sapf_init(sampleRate, preludePath)` (starts the evaluation thread, which loads the prelude), `sapf_eval(code)` (queues code and returns at once), `sapf_busy()` (non-zero while code is queued or running), `sapf_render(out, frames, channels)` and `sapf_num_playing()`. |
 | `audio_worklet.cpp` | Browser build only. `sapf_start_audio(preludePath)` creates the AudioContext, calls `sapf_init` with its sample rate, and starts a Wasm Audio Worklet whose `process` callback calls `sapf_render`. `sapf_audio_node()` returns the node's handle, for example to connect an analyser. |
 | `shim/RtAudio.h` | Fake RtAudio. `openStream` records the callback; `sapf_render` calls every recorded callback and sums them. A mutex guards the list. `stopStream` marks the stream as fading and waits; `sapf_render` applies a 10 ms linear fade and then drops the stream, after which `Play.cpp` deletes the `Player`. `src/Play.cpp` builds unchanged. |
 | `shim/RtMidi.h` | RtMidi with no ports. |
@@ -284,7 +289,7 @@ Results after the fixes:
   #329 are long computations that take over 3 minutes under ASan. All five run in the normal
   build, where wasm memory stayed at its initial 256 MB across all examples.
 - `run-examples.mjs` on the normal build: all 353 examples run, 198 of them play audio, and
-  none crash. 63 print a sapf error: 18 use the mouse UGens, which are not available on web,
+  none crash. 63 print a sapf error: 18 used the mouse UGens, which were not available on web then,
   and the rest come from the runner splitting multi-paragraph examples at blank lines.
 
 ## Next steps

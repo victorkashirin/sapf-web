@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <atomic>
 #include <condition_variable>
+#include <cstring>
 #include <deque>
 #include <map>
 #include <string>
@@ -27,9 +28,20 @@ extern void AddOscOps();
 void loadFile(Thread& th, const char* filename);
 void zctl_(Thread& th, Prim* prim); // src/Midi.cpp
 
-// Ops like sgram, >sfo and prelude run `open <file>` through system(). A browser has nothing to
-// open, and under Node Emscripten's system() would run the command on the host shell, so refuse.
-extern "C" int system(const char*) { return -1; }
+// Ops like sgram, >sfo and prelude run `open <file>` through system(). Never run a command (under
+// Node Emscripten's system() would use the host shell); hand an `open`ed file to the page instead,
+// which downloads it. Sync, so the path string outlives the call.
+extern "C" int system(const char* cmd)
+{
+	if (!cmd || strncmp(cmd, "open ", 5)) return -1;
+	std::string path(cmd + 5);
+	while (!path.empty() && (path.back() == '\n' || path.back() == ' ')) path.pop_back();
+	if (path.size() >= 2 && path.front() == '"' && path.back() == '"') path = path.substr(1, path.size() - 2);
+	MAIN_THREAD_EM_ASM({ if (Module.onSapfOpen) Module.onSapfOpen(UTF8ToString($0)); }, path.c_str());
+	return 0;
+}
+
+void setMousePosition(float x, float y); // src/UGen.cpp
 
 static Thread* gThread;
 static std::mutex gQueueMutex;
@@ -115,6 +127,12 @@ EMSCRIPTEN_KEEPALIVE void sapf_set_ctl(int id, double value)
 {
 	std::lock_guard<std::mutex> lock(gCtlMutex);
 	if (id >= 0 && id < (int)gCtls.size()) gCtls[id]->z = value;
+}
+
+// Called by the page on pointer moves: x and y in [0,1], y = 1 at the top, as on the desktop.
+EMSCRIPTEN_KEEPALIVE void sapf_set_mouse(float x, float y)
+{
+	setMousePosition(x, y);
 }
 
 EMSCRIPTEN_KEEPALIVE void sapf_init(double sampleRate, const char* preludeFile)

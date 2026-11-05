@@ -4306,13 +4306,23 @@ static void ifold_(Thread& th, Prim* prim)
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#ifdef SAPF_CARBON
-#include <Carbon/Carbon.h>
-
+#if defined(SAPF_CARBON) || defined(__EMSCRIPTEN__)
 struct MouseUGenGlobalState {
 	float mouseX, mouseY;
 	bool mouseButton;
 } gMouseUGenGlobals;
+
+#ifdef __EMSCRIPTEN__
+// The page feeds the pointer position through sapf_set_mouse (web/sapf_web.cpp).
+void setMousePosition(float x, float y)
+{
+	gMouseUGenGlobals.mouseX = x;
+	gMouseUGenGlobals.mouseY = y;
+}
+#endif
+
+#ifdef SAPF_CARBON
+#include <Carbon/Carbon.h>
 
 static void* gstate_update_func(void* arg)
 {
@@ -4335,6 +4345,7 @@ static void* gstate_update_func(void* arg)
 
 	return 0;
 }
+#endif // SAPF_CARBON
 
 Z gMouseLagTime = .1;
 Z gMouseLagMul = log001 / gMouseLagTime;
@@ -4528,7 +4539,7 @@ static void xmousey1_(Thread& th, Prim* prim)
 }
 #else
 // TODO
-#endif // SAPF_CARBON
+#endif // SAPF_CARBON || __EMSCRIPTEN__
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -4669,7 +4680,7 @@ void AddUGenOps()
 	DEFMCX(iwrap, 3, "(in lo hi --> out) constrain the input to the bounds by wrapping. all inputs treated as integers.")
 	DEFMCX(ifold, 3, "(in lo hi --> out) constrain the input to the bounds by folding at the edges. all inputs treated as integers.")
 
-#ifdef SAPF_CARBON
+#if defined(SAPF_CARBON) || defined(__EMSCRIPTEN__)
 	vm.addBifHelp("\n*** mouse control unit generators ***");
 	DEFMCX(mousex, 2, "(lo hi --> out) returns a signal of the X coordinate of the mouse mapped to the linear range lo to hi.");
 	DEFMCX(mousey, 2, "(lo hi --> out) returns a signal of the Y coordinate of the mouse mapped to the linear range lo to hi.");

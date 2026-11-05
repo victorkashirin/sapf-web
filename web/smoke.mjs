@@ -93,6 +93,20 @@ assert.equal(sapf.FS.stat('/tmp/t.wav').size, 80 + 4800 * 4, '>sf writes 4800 fl
 const readBack = (await evalSapf('"/tmp/t.wav" sf> 3 N')).match(/-?[\d.e-]+/g).map(Number);
 [0, 1, 2].forEach(i => assert.ok(Math.abs(readBack[i] - 0.3 * Math.sin(2 * Math.PI * 440 * i / SR)) < 1e-6, 'sf> reads back: ' + readBack));
 
+// >sfo hands the file to the page; a length that is a multiple of the write buffer used to print a
+// bogus "failed to write" for the empty last pull
+let opened;
+sapf.onSapfOpen = p => { opened = p; };
+const sfoOut = await evalSapf('clear 440 0 sinosc .3 * 8192 N "o" >sfo');
+assert.equal(opened, '/tmp/o.wav', '>sfo opens its file through the page');
+assert.equal(sapf.FS.stat('/tmp/o.wav').size, 80 + 8192 * 4, '>sfo writes 8192 float frames');
+assert.doesNotMatch(sfoOut, /failed/, '>sfo: ' + sfoOut);
+
+// Mouse ops read the position the page sets
+sapf._sapf_set_mouse(.25, .75);
+assert.deepEqual((await evalSapf('clear 0 100 mousex1 0 100 mousey1')).match(/[\d.]+/g).map(Number), [25, 75], 'mousex1/mousey1');
+await evalSapf('clear');
+
 // `record` plays and writes through the async writer thread
 await evalSapf('clear 440 0 sinosc .3 * "rec" record');
 const recBlocks = 200;
