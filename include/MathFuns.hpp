@@ -63,12 +63,12 @@ const double kDBAmpOffset = 150.;
 
 const int kDecayTableSize = 2000;
 const double kDecayScale = 1000.;
-extern double gDecayTable[kDecayTableSize+1];
+extern double gDecayTable[kDecayTableSize+2]; // +2: lut() reads index+1 at the clamped maximum
 
 const int kFirstOrderCoeffTableSize = 1000;
 const double kInvFirstOrderCoeffTableSize = 1. / kFirstOrderCoeffTableSize;
 const double kFirstOrderCoeffScale = 1000.;
-extern double gFirstOrderCoeffTable[kFirstOrderCoeffTableSize+1];
+extern double gFirstOrderCoeffTable[kFirstOrderCoeffTableSize+2]; // +2: as above
 
 void fillSineTable();
 void fillDBAmpTable();

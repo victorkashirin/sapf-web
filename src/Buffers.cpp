@@ -23,7 +23,7 @@ RtBuffers::RtBuffers(float *inOut, uint32_t inCount, uint32_t inSize)
 {}
 
 RtBuffers::RtBuffers(uint32_t inCount, uint32_t inSize)
-    : out(new float[inCount*inSize]), theCount(inCount), theSize(inSize) {
+    : out(new float[inCount*inSize]), theCount(inCount), theSize(inSize), owned(out) {
 }
 
 uint32_t RtBuffers::count() const {

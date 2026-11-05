@@ -1,8 +1,9 @@
 # sapf on the web (wasm spike)
 
 This folder builds sapf to WebAssembly with Emscripten and runs it in a browser through Web Audio.
-It is a proof of concept. It does not change any existing source file: it only adds shims, a web
-entry point and a build script.
+It is a proof of concept. It adds shims, a web entry point and build scripts. The only changes
+to existing source files are fixes for bugs that AddressSanitizer found (see "AddressSanitizer");
+they apply to the desktop build too.
 
 ## Status
 
@@ -61,6 +62,7 @@ What works:
     oscillator UGens, stream ops, MIDI packets, sound files (libsndfile, resampling),
     the async file writer thread, and spectrogram images. A failing test makes the process
     exit with a non-zero code (checked with a deliberately failing test).
+  - Both suites also pass under AddressSanitizer (see below).
 
 What does not work yet:
 
@@ -125,7 +127,8 @@ main thread (index.html)        eval thread (pthread)          audio thread (Was
 | `shim/readline/*.h` | Empty readline API, so `src/VM.cpp` builds with `USE_LIBEDIT=0`. |
 | `build-deps.sh` | Downloads xsimd, eigen, doctest, fftw and libsndfile (checking SHA-256 hashes) into `$DEPS`, and builds fftw and libsndfile as static wasm libraries with `-pthread` into `$DEPS/prefix`. |
 | `build.sh` | Compiles every `src/*.cpp` listed in `meson.build` (except `main.cpp`), plus `sapf_web.cpp`, `audio_worklet.cpp` and `r8bbase.cpp`, with `-pthread`. Links fftw and libsndfile from `$DEPS/prefix` and libjpeg from Emscripten's port (`-sUSE_LIBJPEG=1`, fetched by Emscripten on first use). Exports `FS` so the page can reach files. Links three outputs: `build/sapf.mjs` (browser, with `-sAUDIO_WORKLET -sWASM_WORKERS`), `build/sapf-node.mjs` (Node, no audio output; `sapf-prelude.txt` is embedded in both), and `build/test_sapf.js` (the C++ test suite in `test/`, whose `main` runs on a pthread through `-sPROXY_TO_PTHREAD` so tests can block and join threads). Thread stacks are 2 MB (Emscripten's default of 64 KB is too small for sapf); the audio worklet stack is 1 MB. |
-| `smoke.mjs` | Node test (assert-based), using `build/sapf-node.mjs`. Also runs `unit-tests.txt`. |
+| `smoke.mjs` | Node test (assert-based), using `build/sapf-node.mjs` (or `SAPF_NODE_MODULE`). Also runs `unit-tests.txt`. |
+| `run-examples.mjs` | Runs every example in `sapf-examples.txt` on a Node build, rendering audio for the ones that play. Stops at the first sanitizer report. |
 | `serve.py` | Dev server with the cross-origin isolation headers. |
 | `index.html` | Demo page: code editor, Run/Stop buttons and log. |
 
@@ -164,30 +167,84 @@ python3 web/serve.py 8765
 Then open http://localhost:8765, put the cursor on a line and press Cmd/Ctrl+Enter.
 Esc stops the sound.
 
+## AddressSanitizer
+
+Wasm does not trap on most out-of-bounds or use-after-free accesses inside its memory; they
+silently corrupt data. So the Node builds can be built with a sanitizer:
+
+```bash
+SANITIZE=address DEPS=/path/to/deps web/build.sh      # builds into web/build-address/
+SAPF_NODE_MODULE=./build-address/sapf-node.mjs node web/smoke.mjs
+node web/build-address/test_sapf.js
+node web/run-examples.mjs web/build-address/sapf-node.mjs   # every example in sapf-examples.txt
+```
+
+`test_sapf.js` also runs LeakSanitizer at exit. The `sapf-node.mjs` module does not: Emscripten
+turns on `EXIT_RUNTIME` for sanitizer builds, which made the module (it has no `main`) shut
+down right after start-up, so `build.sh` turns it back off for the module.
+
+Bugs it found and that are fixed. All of them also affect the desktop build:
+
+- **`unspell` reads past its buffer and hashes garbage.** `vlistToString` and `zlistToString`
+  (`src/StreamOps.cpp`) created the `String` right after `malloc`, before writing the text. The
+  `String` constructor hashes its text, so it read uninitialised memory past the buffer until it
+  met a zero byte, and the string got a hash of garbage instead of its contents. In the release
+  wasm build this crashed the evaluation thread (`RuntimeError: unreachable`) on the example
+  `"reverse a string" Z reverse unspell`. Fix: create the `String` after the text is written.
+- **Out-of-bounds table reads at the clamp edge.** Four interpolated lookup tables are read one
+  entry past their end when the input sits at its clamped maximum: `lut()` reads `index` and
+  `index + 1`, and the clamp puts `index` on the last entry. The interpolation weight is 0 there,
+  but if the value past the end is NaN or infinite, the result is NaN.
+  - `gDecayTable` (`calcDecay`, used by delay UGens such as allpass; ratio clamped to 2). Hit by
+    an example using `AllpassN`.
+  - `gTableForNumHarmonics` (band-limited oscillators in `src/OscilUGens.cpp`; harmonics clamped
+    to 1290, which happens at low frequencies or a frequency of 0). Hit by an example using the
+    pulse-width oscillator (`OscPWM`).
+  - `gFirstOrderCoeffTable` (`t_firstOrderCoeff`; frequency clamped to 1000). Same pattern,
+    found by reading the code.
+  - `gFreqToTable` (`freqToTable`; clamped to 20000). Same pattern; currently unused.
+
+  Fix: each table gets one more entry (`+2`), filled like the rest, the same way `gDBAmpTable`
+  already does (`include/MathFuns.hpp`, `src/MathFuns.cpp`, `src/OscilUGens.cpp`).
+- **Memory leak in `RtBuffers(count, size)`.** That constructor allocates the sample buffer with
+  `new[]` but nothing frees it. Only the C++ tests use it. Fix: the buffer is held in a
+  `std::unique_ptr` (`include/Buffers.hpp`, `src/Buffers.cpp`).
+
+Results after the fixes:
+
+- `test_sapf.js`: 29 of 29 test cases pass; no ASan errors and no leaks.
+- `smoke.mjs` (including all 369 language tests, playback, `sleep`, `go`, the stop fade, sound
+  files, `record` and `sgram`): passes; no ASan errors.
+- `run-examples.mjs`: all 353 examples run without memory errors, except five that could not
+  finish under ASan: #229 and #344 run the ASan allocator out of memory (dense `osc-syn`
+  textures; the 2 GB wasm limit minus ASan's shadow memory and quarantine), and #303, #318 and
+  #329 are long computations that take over 3 minutes under ASan. All five run in the normal
+  build, where wasm memory stayed at its initial 256 MB across all examples.
+- `run-examples.mjs` on the normal build: all 353 examples run, 198 of them play audio, and
+  none crash. 63 print a sapf error: 18 use the mouse UGens, which are not available on web,
+  and the rest come from the runner splitting multi-paragraph examples at blank lines.
+
 ## Next steps
 
 Hardening the wasm engine:
 
-1. **Run under AddressSanitizer.** Wasm does not trap on most out-of-bounds or use-after-free
-   accesses inside its memory; they silently corrupt data. Emscripten supports
-   `-fsanitize=address` with pthreads, so `smoke.mjs` and `test_sapf.js` can run under it.
-2. **Check stack overflow.** Wasm threads have no guard page. Deep recursion in user code can
+1. **Check stack overflow.** Wasm threads have no guard page. Deep recursion in user code can
    run past the 2 MB thread stack into other memory instead of crashing. Test it, and consider
    `-sSTACK_OVERFLOW_CHECK=2` so it fails cleanly.
-3. **Stress the audio thread.** Heavy evaluation, `go` threads touching playing lists, and many
+2. **Stress the audio thread.** Heavy evaluation, `go` threads touching playing lists, and many
    simultaneous sounds. The audio thread busy-waits on locks, including the allocator's global
    lock when it allocates; `-sMALLOC=mimalloc` (per-thread heaps) may reduce that.
-4. **Test other browsers.** Firefox and Safari.
+3. **Test other browsers.** Firefox and Safari.
 
 Later:
 
-5. **Add file access.** Add download links for recordings and spectrograms, and file upload for
+4. **Add file access.** Add download links for recordings and spectrograms, and file upload for
    `sf>`. Keep user files in IDBFS so they survive a reload, and preload `sapf-examples.txt`.
-6. **Move the build into meson.** Use an Emscripten cross file and a `web` option that turns off
+5. **Move the build into meson.** Use an Emscripten cross file and a `web` option that turns off
    rtaudio, rtmidi, libedit and OSC, and get xsimd and eigen from the existing wraps.
-7. **Write a proper Web Audio backend.** Replace the RtAudio shim with a `#ifdef __EMSCRIPTEN__`
+6. **Write a proper Web Audio backend.** Replace the RtAudio shim with a `#ifdef __EMSCRIPTEN__`
    backend in `src/Play.cpp`, next to the AudioToolbox and RtAudio ones.
-8. **Add compressed formats.** Build libogg, libvorbis, FLAC and Opus for wasm and turn on
+7. **Add compressed formats.** Build libogg, libvorbis, FLAC and Opus for wasm and turn on
    libsndfile's external libraries, if those formats are needed.
 
 ## Licence

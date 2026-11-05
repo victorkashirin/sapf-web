@@ -19,8 +19,8 @@
 
 double gSineTable[kSineTableSize+1];
 double gDBAmpTable[kDBAmpTableSize+2];
-double gDecayTable[kDecayTableSize+1];
-double gFirstOrderCoeffTable[kFirstOrderCoeffTableSize+1];
+double gDecayTable[kDecayTableSize+2];
+double gFirstOrderCoeffTable[kFirstOrderCoeffTableSize+2];
 
 
 inline double freqToTableF(double freq)
@@ -28,11 +28,11 @@ inline double freqToTableF(double freq)
 	return std::clamp(3. * log2(freq * .05), 0., 28.999);
 }
 
-Z gFreqToTable[20001];
+Z gFreqToTable[20002]; // +2 past the clamp at 20000: lut() reads index+1
 
 static void initFreqToTable()
 {
-	for (int freq = 0; freq < 20001; ++freq) {
+	for (int freq = 0; freq < 20002; ++freq) {
 		gFreqToTable[freq] = freqToTableF(freq);
 	}
 }
@@ -65,7 +65,7 @@ void fillDBAmpTable()
 
 void fillDecayTable()
 {
-	for (int i = 0; i < kDecayTableSize+1; ++i) {
+	for (int i = 0; i < kDecayTableSize+2; ++i) {
 		gDecayTable[i] = exp(log001 * i * .001);
 	}	
 }
@@ -73,7 +73,7 @@ void fillDecayTable()
 void fillFirstOrderCoeffTable()
 {
 	double k = M_PI * kInvFirstOrderCoeffTableSize;
-	for (int i = 0; i < kFirstOrderCoeffTableSize+1; ++i) {
+	for (int i = 0; i < kFirstOrderCoeffTableSize+2; ++i) {
 		double x = k * i;
 		Z b = 2. - cos(x);
 		gFirstOrderCoeffTable[i] = b - sqrt(b*b - 1.);

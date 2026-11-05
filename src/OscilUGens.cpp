@@ -51,7 +51,7 @@ int gWaveTableSize[kNumTables];
 const double kMaxHarmonicsF = kMaxHarmonics;
 
 
-Z gTableForNumHarmonics[kMaxHarmonics+1];
+Z gTableForNumHarmonics[kMaxHarmonics+2]; // +2: lut() reads index+1 at the clamped maximum
 Z gHertzToHarmonics[kMaxHarmonics+1];
 
 static void fillHarmonicsTable()
@@ -70,6 +70,7 @@ static void fillHarmonicsTable()
 		
 	gTableForNumHarmonics[0] = 0.;
 	gTableForNumHarmonics[kMaxHarmonics] = maxval;
+	gTableForNumHarmonics[kMaxHarmonics+1] = maxval;
 }
 
 static void zeroTable(size_t n, Z* table)

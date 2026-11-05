@@ -2,7 +2,8 @@
 // Here Node's main thread plays the audio thread's role and calls sapf_render itself.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import createSapf from './build/sapf-node.mjs';
+// SAPF_NODE_MODULE picks another build, e.g. ./build-address/sapf-node.mjs (relative to this file)
+const { default: createSapf } = await import(process.env.SAPF_NODE_MODULE ?? './build/sapf-node.mjs');
 
 let out = '';
 const sapf = await createSapf({ print: s => { out += s + '\n'; }, printErr: s => { out += s + '\n'; } });

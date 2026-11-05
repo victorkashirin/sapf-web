@@ -1506,8 +1506,6 @@ static P<String> vlistToString(Thread& th, P<List> const& list)
 	size_t n = packedList->length(th);
 	char* s = (char*)malloc(n+1);
 	
-	P<String> string = new String(s, "dummy");
-	
 	Array* a = packedList->mArray();
 	V* v = a->v();
 	
@@ -1516,7 +1514,8 @@ static P<String> vlistToString(Thread& th, P<List> const& list)
 	}
 	s[n] = 0;
 	
-	return string;
+	// String hashes its text on construction, so build it only once the text is complete
+	return new String(s, "dummy");
 }
 
 static P<String> zlistToString(Thread& th, P<List> const& list)
@@ -1528,8 +1527,6 @@ static P<String> zlistToString(Thread& th, P<List> const& list)
 	size_t n = packedList->length(th);
 	char* s = (char*)malloc(n+1);
 	
-	P<String> string = new String(s, "dummy");
-	
 	Array* a = packedList->mArray();
 	Z* z = a->z();
 	
@@ -1538,7 +1535,8 @@ static P<String> zlistToString(Thread& th, P<List> const& list)
 	}
 	s[n] = 0;
 	
-	return string;
+	// String hashes its text on construction, so build it only once the text is complete
+	return new String(s, "dummy");
 }
 
 static void V_(Thread& th, Prim* prim)

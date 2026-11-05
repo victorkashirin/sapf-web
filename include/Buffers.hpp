@@ -8,6 +8,7 @@
 #include <RtAudio.h>
 #endif
 #include <cstdint>
+#include <memory>
 
 #ifdef SAPF_AUDIOTOOLBOX
 class AUBuffers {
@@ -32,6 +33,8 @@ public:
     float *out;
     uint32_t theCount;
     uint32_t theSize;
+private:
+    std::unique_ptr<float[]> owned; // set by the (count, size) constructor, which allocates `out`
 };
 typedef RtBuffers Buffers;
 #endif
