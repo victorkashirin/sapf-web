@@ -71,12 +71,15 @@
   }
   .pop .item:hover, .pop .item:focus-visible { background: #ffffff10; color: var(--amber); }
   .pop .item.cur { color: var(--amber); }
-  .pop .file { display: flex; }
+  .pop .file { display: flex; align-items: center; }
+  .pop .ch { flex: none; color: var(--dim); font-size: 11px; padding: 0 4px 0 8px; }
+  .pop .gap { visibility: hidden; } /* where × would be, so labels line up */
   .pop .del { flex: none; width: auto; color: var(--dim); }
   .pop .del:hover, .pop .del:focus-visible { background: none; color: var(--red); }
   .pop .tag { font-size: 10px; font-weight: 600; letter-spacing: .08em; padding: 10px 8px 4px; margin-top: 4px; border-top: 1px solid #ffffff0d; }
   .pop .none { color: var(--dim); padding: 5px 8px; }
-  #fileList .item, .pop .none, .pop [data-example] { padding-left: 18px; } /* entries under a heading */
+  #fileList .item, #soundList .item, .pop .none, .pop [data-example] { padding-left: 18px; } /* entries under a heading */
+  .pop .hint { color: var(--dim); font-size: 11px; padding: 8px 8px 2px; border-top: 1px solid #ffffff0d; margin-top: 4px; }
   #fileLabel { color: var(--dim); letter-spacing: .1em; text-transform: none; }
   #stop { color: var(--red); }
 
@@ -162,6 +165,16 @@
       <div class="tag">examples</div>
       <button class="item" data-example="sapf-examples.txt">sapf examples</button>
       <button class="item" data-example="sapf-bif-examples.txt">built-in function examples</button>
+    </div>
+  </details>
+  <details class="menu" id="soundMenu">
+    <summary class="btn">Sounds</summary>
+    <div class="pop">
+      <button class="item" id="upload">Upload sound files…</button>
+      <input type="file" id="soundFile" accept="audio/*,.wav,.aif,.aiff,.caf,.au" multiple hidden>
+      <div class="tag">sounds</div>
+      <div id="soundList"></div>
+      <div class="hint">Click a sound to insert <code>"name" sf&gt;</code> at the cursor. Uploads stay in this browser.</div>
     </div>
   </details>
   <button id="run">Run</button><button id="stop">Stop</button><button id="addSlider">Add control</button>
@@ -276,12 +289,109 @@ sapfReady.then(m => addEventListener('pointermove', e =>
   m._sapf_set_mouse(clamp01(e.clientX / innerWidth), clamp01(1 - e.clientY / innerHeight))))
   .catch(() => {}); // a failed load surfaces where boot() awaits it
 
+// Sound bank: files in /sounds in sapf's file system, which is the working directory, so
+// `"blip.wav" sf>` reads one. Built-in sounds come from web/sounds; uploads are kept in IndexedDB
+// ('sapf-web' / 'sounds') so they survive a reload, and written to /sounds when the page loads.
+const BUILTIN = ['blip.wav'], SOUNDS = '/sounds';
+const SNDFILE = /\.(wav|wave|aiff?|aifc|caf|au|snd|w64|rf64)$/i; // what sapf's libsndfile reads (no MP3/Ogg/FLAC codecs)
+const userSounds = new Set(), builtinSounds = new Set(); // builtinSounds: the built-ins that loaded
+const soundChannels = new Map(); // name -> channel count, for the Sounds menu
+// Channel count from a WAV (RIFF/RF64) or AIFF header. shortcut: other formats (CAF, AU, W64) get
+// no count, so no mono/stereo label; read their headers too if they are uploaded much.
+function channelsOf(d) {
+  const v = new DataView(d.buffer, d.byteOffset, d.byteLength), id = at => String.fromCharCode(...d.subarray(at, at + 4));
+  const riff = /^(RIFF|RF64)$/.test(id(0)), aiff = id(0) === 'FORM' && /^AIF[FC]$/.test(id(8));
+  if (!riff && !aiff) return;
+  for (let at = 12; at + 8 <= d.length; ) { // chunks: 4-byte id, 4-byte size (LE in RIFF, BE in AIFF), even-padded
+    if (id(at) === (riff ? 'fmt ' : 'COMM')) return riff ? v.getUint16(at + 10, true) : v.getInt16(at + 8);
+    const size = v.getUint32(at + 4, riff);
+    at += 8 + size + (size & 1);
+  }
+}
+function putSound(m, name, data) {
+  m.FS.writeFile(`${SOUNDS}/${name}`, data);
+  try { soundChannels.set(name, channelsOf(data)); } catch { soundChannels.delete(name); } // truncated header
+}
+// Never leaves the promise pending: boot() waits on the sound bank, so a hang would stop Run for good.
+const idb = (mode, f) => new Promise((ok, fail) => {
+  const open = indexedDB.open('sapf-web', 1);
+  open.onupgradeneeded = () => open.result.createObjectStore('sounds', { keyPath: 'name' });
+  open.onerror = () => fail(open.error);
+  open.onsuccess = () => {
+    const db = open.result;
+    try {
+      const tx = db.transaction('sounds', mode), req = f(tx.objectStore('sounds'));
+      tx.oncomplete = () => { db.close(); ok(req.result); };
+      tx.onabort = () => { db.close(); fail(tx.error); };
+    } catch (e) { db.close(); fail(e); }
+  };
+});
+async function addBuiltin(m, name) {
+  try {
+    const r = await fetch('sounds/' + name);
+    if (!r.ok) throw r.status;
+    const data = new Uint8Array(await r.arrayBuffer());
+    if (!userSounds.has(name)) putSound(m, name, data);
+    builtinSounds.add(name);
+  } catch { print(`Could not load the built-in sound ${name}`, 'err'); }
+}
+const soundsReady = sapfReady.then(async m => {
+  m.FS.mkdir(SOUNDS);
+  m.FS.chdir(SOUNDS);
+  try {
+    for (const { name, data } of await idb('readonly', s => s.getAll())) { putSound(m, name, data); userSounds.add(name); }
+  } catch { print('Browser storage is blocked: uploaded sounds are not kept after a reload.', 'err'); }
+  await Promise.all(BUILTIN.map(name => addBuiltin(m, name)));
+  return m;
+});
+
+// An AudioBuffer as a 32-bit float WAV, for formats the browser decodes but libsndfile does not.
+function wav(b) {
+  const ch = b.numberOfChannels, size = b.length * ch * 4, v = new DataView(new ArrayBuffer(44 + size));
+  const str = (at, s) => [...s].forEach((c, i) => v.setUint8(at + i, c.charCodeAt(0)));
+  str(0, 'RIFF'); v.setUint32(4, 36 + size, true); str(8, 'WAVEfmt '); v.setUint32(16, 16, true);
+  v.setUint16(20, 3, true); v.setUint16(22, ch, true); v.setUint32(24, b.sampleRate, true); // 3: IEEE float
+  v.setUint32(28, b.sampleRate * ch * 4, true); v.setUint16(32, ch * 4, true); v.setUint16(34, 32, true);
+  str(36, 'data'); v.setUint32(40, size, true);
+  for (let c = 0; c < ch; ++c) {
+    const d = b.getChannelData(c);
+    for (let i = 0; i < b.length; ++i) v.setFloat32(44 + (i * ch + c) * 4, d[i], true);
+  }
+  return new Uint8Array(v.buffer);
+}
+
+async function addSounds(files) {
+  const m = await soundsReady;
+  for (const file of files) {
+    let name = file.name.replace(/["/\\]/g, '_'), data = new Uint8Array(await file.arrayBuffer()); // `"` would end the sapf string
+    if (!SNDFILE.test(name)) try {
+      data = wav(await new OfflineAudioContext(1, 1, 48000).decodeAudioData(data.buffer));
+      name = name.replace(/\.[^.]*$/, '') + '.wav';
+    } catch { print(`Could not decode ${file.name}: not an audio file this browser can read.`, 'err'); continue; }
+    // Compressed uploads become .wav, so "kick.mp3" and "kick.ogg" share a name.
+    if ((userSounds.has(name) || builtinSounds.has(name)) && !confirm(`Replace the sound "${name}" with ${file.name}?`)) continue;
+    putSound(m, name, data);
+    userSounds.add(name);
+    try { await idb('readwrite', s => s.put({ name, data })); }
+    catch { print(`${name} is loaded for this session only: browser storage is full or blocked.`, 'err'); }
+    print(`; added "${name}" sf>`, 'dim');
+  }
+}
+async function deleteSound(name) {
+  const m = await soundsReady;
+  userSounds.delete(name);
+  try { m.FS.unlink(`${SOUNDS}/${name}`); } catch {}
+  await idb('readwrite', s => s.delete(name)).catch(() => {});
+  if (BUILTIN.includes(name)) await addBuiltin(m, name); // an upload had replaced it
+}
+
 async function boot() {
   if (ctx) return;
-  sapf = await sapfReady;
+  sapf = await soundsReady;
   sapf.onSapfSlider = onSapfSlider;
   sapf.onSapfOpen = onSapfOpen;
-  ctx = sapf.emscriptenGetAudioObject(sapf.ccall('sapf_start_audio', 'number', ['string'], ['sapf-prelude.txt']));
+  // An absolute path: the working directory is /sounds.
+  ctx = sapf.emscriptenGetAudioObject(sapf.ccall('sapf_start_audio', 'number', ['string'], ['/sapf-prelude.txt']));
   window.sapf = sapf; window.sapfCtx = ctx; // for debugging in devtools
 }
 
@@ -386,8 +496,42 @@ fileMenu.ontoggle = () => {
   }
   fileName.focus();
 };
-document.addEventListener('click', e => fileMenu.open && !fileMenu.contains(e.target) && (fileMenu.open = false));
+const soundMenu = document.getElementById('soundMenu'), soundFile = document.getElementById('soundFile');
+async function listSounds() {
+  await soundsReady;
+  const list = document.getElementById('soundList');
+  list.replaceChildren();
+  for (const name of [...new Set([...builtinSounds, ...userSounds])].sort()) {
+    const row = document.createElement('div');
+    row.className = 'file';
+    row.innerHTML = '<button class="item"></button><span class="ch"></span>' +
+      (userSounds.has(name) ? '<button class="del">×</button>' : '<span class="del gap" aria-hidden="true">×</span>');
+    const [insert, ch, x] = row.children, n = soundChannels.get(name), del = userSounds.has(name) && x;
+    insert.textContent = name;
+    ch.textContent = n === 1 ? 'mono' : n === 2 ? 'stereo' : n ? n + ' ch' : '';
+    insert.title = [userSounds.has(name) ? 'uploaded' : 'built-in', ch.textContent].filter(Boolean).join(', ');
+    insert.onclick = () => {
+      soundMenu.open = false;
+      editor.dispatch(editor.state.replaceSelection(`"${name}" sf> `));
+      editor.focus();
+    };
+    if (del) {
+      del.title = `Delete "${name}"`;
+      del.setAttribute('aria-label', del.title);
+      del.onclick = async () => confirm(`Delete the sound "${name}"?`) && (await deleteSound(name), listSounds());
+    }
+    list.append(row);
+  }
+  if (!list.children.length) list.innerHTML = '<div class="none">no sounds yet</div>';
+}
+soundMenu.ontoggle = () => soundMenu.open && listSounds();
+document.getElementById('upload').onclick = () => soundFile.click();
+soundFile.onchange = async () => { await addSounds([...soundFile.files]); soundFile.value = ''; listSounds(); };
+document.addEventListener('click', e => {
+  for (const menu of [fileMenu, soundMenu]) if (menu.open && !menu.contains(e.target)) menu.open = false;
+});
 fileMenu.onkeydown = e => e.key === 'Escape' && closeMenu();
+soundMenu.onkeydown = e => { if (e.key === 'Escape') { soundMenu.open = false; editor.focus(); } };
 document.getElementById('run').onclick = () => {
   const { from, to } = editor.state.selection.main;
   evalCode(lineAt(editor.state.doc.toString(), from, to).code);

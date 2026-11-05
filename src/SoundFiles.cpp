@@ -190,7 +190,13 @@ void sfread(Thread& th, Arg filename, int64_t offset, int64_t frames)
 
 	if(soundFile != nullptr) {
 		SFReader* sfr = new SFReader(std::move(soundFile), -1);
-		th.push(sfr->createOutputs(th));
+		P<List> channels = sfr->createOutputs(th);
+#ifdef __EMSCRIPTEN__
+		// Web: read the whole file now, on this thread. Read lazily, a played sound is pulled on the
+		// audio worklet thread, which cannot reach the file system, and plays silence.
+		for (int64_t i = 0; i < channels->mArray->size(); ++i) ((List*)channels->mArray->v()[i].o())->force(th);
+#endif
+		th.push(channels);
 	}
 }
 

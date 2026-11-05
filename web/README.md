@@ -8,6 +8,11 @@ which apply to the desktop build too, and two small changes in `src/Midi.cpp` fo
 longer `static`. `src/UGen.cpp` also builds the mouse UGens under Emscripten, and
 `src/SndfileSoundFile.cpp` no longer reports an empty write as a failure (`>sf` printed
 "failed to write audio data to file - No Error" when the signal ended on a buffer boundary).
+Under Emscripten, `sf>` (`src/SoundFiles.cpp`) reads the whole file when it runs instead of block
+by block as the sound is pulled: a played sound is pulled on the audio worklet thread, which cannot
+reach the file system, so `["x.wav" sf> head #[0] cyc] $/ play` played silence. `sf>` called
+inside an `ola` function still plays silence, as that function runs on the audio thread: read the
+file first (`"x.wav" sf> head = b  \[b 0 pan2] .25 1 2 ola play`).
 
 ## Status
 
@@ -31,6 +36,12 @@ What works:
   through its writer thread. Files live in Emscripten's in-memory file system; recordings go to
   `/tmp` as on the desktop.
 - `sgram` writes spectrogram JPEGs through libjpeg (to `/tmp`).
+- Sound bank: the Sounds menu uploads sound files, lists them, and inserts `"name" sf>` at the
+  cursor. Files live in `/sounds`, sapf's working directory, so `"blip.wav" sf>` reads one.
+  Built-in sounds are served from `web/sounds` (`blip.wav`, which also replaces the macOS-only
+  `/System/Library/Sounds/Submarine.aiff` in the built-in function examples). Uploads are kept in
+  IndexedDB and survive a reload. Formats libsndfile cannot read (MP3, Ogg, FLAC, ...) are decoded
+  by the browser at upload and stored as 32-bit float WAV at 48 kHz.
 - "Open" means download: `>sfo`, `sgram` and `prelude` run `system("open <file>")`; the web build
   runs no command and instead hands the file to the page, which downloads it.
 - Mouse UGens (`mousex`, `mousey`, `xmousex`, `xmousey` and their `1` forms) follow the pointer
@@ -94,8 +105,8 @@ What does not work yet:
 
 | Feature | Status | Why / how to fix |
 |---|---|---|
-| Getting files in and out of the browser | Partly | `>sfo` and `sgram` put a download link in the console, and download at once if the key press that ran the code still counts as a user action (Chrome: about 5 s), so Chrome does not ask about repeated downloads. `>sf` and `record` output stays in the in-memory file system and is lost on reload, and there is no way to load your own sound files yet. From devtools: `sapf.FS.readFile('/tmp/name.wav')`. Fix: download links, file upload, IDBFS for persistence. |
-| Compressed sound files (FLAC, Ogg, Opus, MP3) | Not supported | libsndfile is built without external codec libraries (`-DENABLE_EXTERNAL_LIBS=OFF`). WAV, AIFF and the other uncompressed formats work. |
+| Getting files in and out of the browser | Partly | `>sfo` and `sgram` put a download link in the console, and download at once if the key press that ran the code still counts as a user action (Chrome: about 5 s), so Chrome does not ask about repeated downloads. `>sf` and `record` output stays in the in-memory file system and is lost on reload. Sound files can be uploaded through the Sounds menu and are kept in IndexedDB. From devtools: `sapf.FS.readFile('/tmp/name.wav')`. Fix: list `/tmp` output in the Sounds menu. |
+| Compressed sound files (FLAC, Ogg, Opus, MP3) | Upload only | libsndfile is built without external codec libraries (`-DENABLE_EXTERNAL_LIBS=OFF`), so `sf>` reads only WAV, AIFF and the other uncompressed formats. The Sounds menu decodes compressed uploads in the browser and stores them as WAV. |
 | MIDI | No ports | `shim/RtMidi.h` reports zero ports. Could be bridged to Web MIDI. |
 | OSC | Off | Browsers have no UDP. |
 | `examples`, `readme`, `logfile` ops | No-op | They have no file to open on the web. |
@@ -155,7 +166,8 @@ main thread (index.html)        eval thread (pthread)          audio thread (Was
 | `smoke.mjs` | Node test (assert-based), using `build/sapf-node.mjs` (or `SAPF_NODE_MODULE`). Also runs `unit-tests.txt`. |
 | `run-examples.mjs` | Runs every example in `sapf-examples.txt` on a Node build, rendering audio for the ones that play. Stops at the first sanitizer report. |
 | `serve.py` | Dev server with the cross-origin isolation headers. |
-| `index.html` | The page: editor and console side by side, File menu, Run/Stop/Add control buttons, page sliders, About dialog. |
+| `index.html` | The page: editor and console side by side, File menu, Sounds menu (sound bank), Run/Stop/Add control buttons, page sliders, About dialog. |
+| `sounds/` | Built-in sounds, loaded into `/sounds` in sapf's file system with the page (`blip.wav`). |
 | `editor.js` | The page's code editor: CodeMirror 6 with the features of the [vs-sapf](https://github.com/victorkashirin/vs-sapf) VS Code extension (highlighting, hover docs, completion, line/block/paragraph evaluation, formatting). `npm run build` (in `web/`, called by `build.sh`) bundles it with esbuild into `build/editor.js`. |
 | `sapf-text.mjs` | Text logic ported from vs-sapf: the line, `( )` block and paragraph under the cursor, the formatter, and the `helpall` parser. Tested by `sapf-text.test.mjs`. |
 | `gen-docs.mjs` | Runs `helpall` on `build/sapf-node.mjs` and writes `build/sapf-docs.json`, the editor's hover and completion docs, so they always match the built-ins and the prelude. |
@@ -224,7 +236,7 @@ evaluated text only, so calling a function that plays (`\[... play] = f`, then `
 `.github/workflows/web.yml` deploys the page to a Cloudflare Worker that serves static files
 (`wrangler.jsonc`). It runs when a GitHub Release is published, or by hand from the Actions tab
 ("Web release"). It builds the dependencies (cached between runs), runs `build.sh`, `smoke.mjs`,
-`sapf-text.test.mjs` and `test_sapf.js`, copies `index.html`, `_headers`, `build/sapf.mjs`, `build/sapf.wasm` and `build/editor.js` into
+`sapf-text.test.mjs` and `test_sapf.js`, copies `index.html`, `_headers`, `favicon.png`, `sounds/`, `build/sapf.mjs`, `build/sapf.wasm` and `build/editor.js` into
 `web/dist`, deploys that folder with wrangler 4, and attaches it as `sapf-web.zip` to the
 release. A prerelease gets the zip but does not replace the live site.
 
@@ -306,8 +318,7 @@ Hardening the wasm engine:
 
 Later:
 
-4. **Add file access.** Add download links for recordings and spectrograms, and file upload for
-   `sf>`. Keep user files in IDBFS so they survive a reload, and preload `sapf-examples.txt`.
+4. **Add file access.** List recordings and other `/tmp` output in the Sounds menu.
 5. **Move the build into meson.** Use an Emscripten cross file and a `web` option that turns off
    rtaudio, rtmidi, libedit and OSC, and get xsimd and eigen from the existing wraps.
 6. **Write a proper Web Audio backend.** Replace the RtAudio shim with a `#ifdef __EMSCRIPTEN__`

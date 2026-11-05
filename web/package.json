@@ -1,7 +1,7 @@
 {
   "private": true,
   "scripts": {
-    "build": "node gen-docs.mjs && cp ../sapf-examples.txt ../sapf-bif-examples.txt build/ && esbuild editor.js --bundle --minify --format=esm --outfile=build/editor.js",
+    "build": "node gen-docs.mjs && cp ../sapf-examples.txt build/ && sed 's|/System/Library/Sounds/Submarine.aiff|blip.wav|' ../sapf-bif-examples.txt > build/sapf-bif-examples.txt && esbuild editor.js --bundle --minify --format=esm --outfile=build/editor.js",
     "test": "node sapf-text.test.mjs"
   },
   "dependencies": {

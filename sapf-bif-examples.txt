@@ -448,6 +448,18 @@ ord aa 5 < skipWhile
 
 "/System/Library/Sounds/Submarine.aiff" sf> .01 (.16 sr * hanning) wseg flop muss .04 1 2 ola  100 T 0 >sfo
 
+; play a sound file. sf> gives one signal per channel: head takes the first, 0 pan2 makes it stereo.
+
+"/System/Library/Sounds/Submarine.aiff" sf> head cyc (1/4 0 sinosc 300 4000 bilin) .2 rlpf .5 * 0 pan2 play
+
+"/System/Library/Sounds/Submarine.aiff" sf> head = b  \[b 1 rand2 pan2] [.25 .125 .125 .5] cyc 1 2 ola .7 * play
+
+"/System/Library/Sounds/Submarine.aiff" sf> head = b  [b #[0] cyc] $/ [.3 .45] .5 4 combc 5 T play
+
+"/System/Library/Sounds/Submarine.aiff" sf> .005 (.1 sr * hanning) wseg flop muss .03 1 1 ola head 0 pan2 play
+
+"/System/Library/Sounds/Submarine.aiff" sf> head reverse cyc 300 0 sinosc * 0 pan2 play
+
 
 ;;; audio I/O operations ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
