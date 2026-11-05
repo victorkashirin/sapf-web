@@ -58,9 +58,14 @@ jobs:
           mkdir -p web/dist/build
           cp web/index.html web/_headers web/dist/
           cp web/build/sapf.mjs web/build/sapf.wasm web/dist/build/
+          # GPL: the Source link points at the exact commit being deployed, not at main.
+          sed -i "s|href=\"https://github.com/$GITHUB_REPOSITORY\">Source|href=\"https://github.com/$GITHUB_REPOSITORY/tree/$GITHUB_SHA\">Source|" web/dist/index.html
+          grep -q "tree/$GITHUB_SHA\">Source" web/dist/index.html
           (cd web/dist && zip -r ../../sapf-web.zip .)
 
       - name: Deploy to Cloudflare
+        # Prereleases get the zip but do not replace the live site.
+        if: ${{ !github.event.release.prerelease }}
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}

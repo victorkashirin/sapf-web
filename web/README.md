@@ -9,7 +9,7 @@ they apply to the desktop build too.
 
 What works:
 
-- All of `src/` compiles with `em++` (Emscripten 6.0.12) and links into `sapf.wasm`
+- All of `src/` compiles with `em++` (Emscripten 5.0.7) and links into `sapf.wasm`
   (3.7 MB, 920 KB gzipped). It uses the same libraries as the native portable build: fftw 3.3.10,
   libsndfile 1.2.2 and libjpeg, all compiled to wasm. fftw accounts for most of the size
   (it was 2.6 MB with the earlier hand-written FFT).
@@ -167,6 +167,22 @@ python3 web/serve.py 8765
 Then open http://localhost:8765, put the cursor on a line and press Cmd/Ctrl+Enter.
 Esc stops the sound.
 
+## Deploying
+
+`.github/workflows/web.yml` deploys the page to a Cloudflare Worker that serves static files
+(`wrangler.jsonc`). It runs when a GitHub Release is published, or by hand from the Actions tab
+("Web release"). It builds the dependencies (cached between runs), runs `build.sh`, `smoke.mjs`
+and `test_sapf.js`, copies `index.html`, `_headers`, `build/sapf.mjs` and `build/sapf.wasm` into
+`web/dist`, deploys that folder with wrangler 4, and attaches it as `sapf-web.zip` to the
+release. A prerelease gets the zip but does not replace the live site.
+
+- `_headers` sends the cross-origin isolation headers, like `serve.py` does.
+- The page's Source link is rewritten to the deployed commit, to meet the GPL (see "Licence").
+- The repository needs the secrets `CLOUDFLARE_API_TOKEN` (from the "Edit Cloudflare Workers"
+  token template) and `CLOUDFLARE_ACCOUNT_ID`.
+- To try the deployed setup locally, build, assemble `web/dist` as the workflow does, and run
+  `npx wrangler@4 dev` in `web/`.
+
 ## AddressSanitizer
 
 Wasm does not trap on most out-of-bounds or use-after-free accesses inside its memory; they
@@ -249,4 +265,5 @@ Later:
 
 ## Licence
 
-sapf is GPL-3.0. A public web deployment must offer the corresponding source.
+sapf is GPL-3.0. A public web deployment must offer the corresponding source. The page links to
+the GitHub repository, and the deploy workflow points that link at the exact deployed commit.
