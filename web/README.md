@@ -9,7 +9,9 @@ entry point and a build script.
 What works:
 
 - All of `src/` compiles with `em++` (Emscripten 6.0.12) and links into `sapf.wasm`
-  (2.6 MB, 505 KB gzipped).
+  (3.7 MB, 920 KB gzipped). It uses the same libraries as the native portable build: fftw 3.3.10,
+  libsndfile 1.2.2 and libjpeg, all compiled to wasm. fftw accounts for most of the size
+  (it was 2.6 MB with the earlier hand-written FFT).
 - The threading model matches the native app:
   - code is evaluated on its own thread (a wasm pthread)
   - audio is rendered on the browser's audio thread (a Wasm Audio Worklet)
@@ -17,7 +19,11 @@ What works:
   - `go` starts new threads and `sleep` blocks the calling thread
 - The prelude loads, code is evaluated like one REPL step, and the stack is printed.
 - `play` and `stop` work, with up to 32 channels mixed into the browser output.
-- `fft` and the other FFT ops work through a small built-in FFT (see `fftw_shim.cpp`).
+- `fft` and the other FFT ops use fftw.
+- Sound files work through libsndfile: `>sf` writes, `sf>` reads, and `record` plays and writes
+  through its writer thread. Files live in Emscripten's in-memory file system; recordings go to
+  `/tmp` as on the desktop.
+- `sgram` writes spectrogram JPEGs through libjpeg (to `/tmp`).
 - Tests that passed:
   - `node web/smoke.mjs` (Node plays the audio thread's role):
     - the prelude loads
@@ -26,6 +32,9 @@ What works:
     - one second of audio renders while the evaluation thread is blocked in `1 sleep`
     - a `go` thread runs and prints
     - `stop` removes the stream
+    - `>sf` writes a WAV of the expected size, and `sf>` reads back the exact samples
+    - `record` writes every rendered frame (25,600 of 25,600), and the file holds the sine
+    - `sgram` writes a valid JPEG, and its `open` call does not reach the host shell
   - In the browser (Chromium), through the Wasm Audio Worklet:
     - `[300 1200] 0 sinosc .3 * play` gives 300 Hz on the left channel and 1200 Hz on the
       right, both at the expected level
@@ -33,18 +42,22 @@ What works:
       0.212 in all 117 measurements taken during it
     - the page stayed responsive during that evaluation (a 50 ms timer was never late)
     - `\[.5 sleep "from go" pr cr] go` printed after 0.5 s while the main evaluation continued
+    - `fft` gives the exact expected spectrum
+    - `[300 1200] 0 sinosc .3 * "webrec" record` for about a second wrote a 2-channel WAV of
+      1.09 s, which `sf>` reads back
+    - `sgram` writes a valid JPEG
     - syntax errors are printed to the page log, and the console shows no errors
 
 What does not work yet:
 
 | Feature | Status | Why / how to fix |
 |---|---|---|
-| Sound file read/write (`sf>`, `>sf`, `>sfo`, `record`) | Fails with a message | libsndfile is stubbed in `stubs.cpp`. Build libsndfile for wasm (CMake, `-DENABLE_EXTERNAL_LIBS=OFF`) and link it. Files would live in Emscripten's MEMFS/IDBFS. The recording writer thread itself should now work. |
-| Spectrogram JPEG output | Prints "not available" | `Bitmap` is stubbed. Use Emscripten's `-sUSE_LIBJPEG=1` port and compile `src/makeImage.cpp`. |
+| Getting files in and out of the browser | No UI | Recordings, `>sf` output and spectrograms are written to the in-memory file system and are lost on reload. The page has no way to download them or to load your own sound files yet. From devtools: `sapf.FS.readFile('/tmp/name.wav')`. Fix: download links, file upload, IDBFS for persistence. |
+| Compressed sound files (FLAC, Ogg, Opus, MP3) | Not supported | libsndfile is built without external codec libraries (`-DENABLE_EXTERNAL_LIBS=OFF`). WAV, AIFF and the other uncompressed formats work. |
 | MIDI | No ports | `shim/RtMidi.h` reports zero ports. Could be bridged to Web MIDI. |
 | OSC | Off | Browsers have no UDP. |
 | Mouse UGens | Off | They are Carbon-only on desktop too. Could be fed from pointer events. |
-| `prelude`, `examples`, `readme`, `logfile` ops; "open after write" | No-op | They call `system("open …")`. |
+| `prelude`, `examples`, `readme`, `logfile` ops; "open after write" (`>sfo`, `sgram`) | No-op | They call `system("open …")`, which the web build refuses (see `sapf_web.cpp`). |
 | Line editing and history | Not needed | The page sends code through `sapf_eval`. |
 
 Known limits of the current approach:
@@ -64,11 +77,11 @@ Known limits of the current approach:
   still uses it, the same guarantee a real `RtAudio::stopStream` gives.
 - **Only tested in Chromium.** Firefox and Safari support Wasm Audio Worklets and cross-origin
   isolation, but this was not checked.
-- **The FFT is a simple radix-2 FFT.** It is correct, but slower than fftw. sapf only asks for
-  power-of-two sizes; other sizes abort.
 - **Only a few ops were tested.** `sapf-examples.txt` has not been run in the browser.
-- The build needs external headers in a `DEPS` folder (see "Building"). They are not yet
-  meson subprojects.
+- The dependencies are built by a separate script into a `DEPS` folder (see "Building"), not
+  through meson.
+- fftw has no wasm SIMD code, so it runs its portable C version, which is slower than native
+  fftw. FFT speed has not been measured.
 
 ## How it works
 
@@ -87,14 +100,13 @@ main thread (index.html)        eval thread (pthread)          audio thread (Was
 
 | File | Purpose |
 |---|---|
-| `sapf_web.cpp` | Replaces `src/main.cpp`. Exports `sapf_init(sampleRate, preludePath)` (starts the evaluation thread, which loads the prelude), `sapf_eval(code)` (queues code and returns at once), `sapf_busy()` (non-zero while code is queued or running), `sapf_render(out, frames, channels)` and `sapf_num_playing()`. |
+| `sapf_web.cpp` | Replaces `src/main.cpp`. Overrides `system()` to do nothing: sapf ops run `open <file>` through it, and under Node Emscripten's `system()` would run that on the host shell. Exports `sapf_init(sampleRate, preludePath)` (starts the evaluation thread, which loads the prelude), `sapf_eval(code)` (queues code and returns at once), `sapf_busy()` (non-zero while code is queued or running), `sapf_render(out, frames, channels)` and `sapf_num_playing()`. |
 | `audio_worklet.cpp` | Browser build only. `sapf_start_audio(preludePath)` creates the AudioContext, calls `sapf_init` with its sample rate, and starts a Wasm Audio Worklet whose `process` callback calls `sapf_render`. `sapf_audio_node()` returns the node's handle, for example to connect an analyser. |
 | `shim/RtAudio.h` | Fake RtAudio. `openStream` records the callback; `sapf_render` calls every recorded callback and sums them. A mutex guards the list. `src/Play.cpp` builds unchanged. |
 | `shim/RtMidi.h` | RtMidi with no ports. |
 | `shim/readline/*.h` | Empty readline API, so `src/VM.cpp` builds with `USE_LIBEDIT=0`. |
-| `fftw_shim.cpp` | The 7 fftw3 functions that `src/dsp.cpp` and `src/Spectrogram.cpp` use. |
-| `stubs.cpp` | Stubs for libsndfile and `Bitmap` (JPEG). |
-| `build.sh` | Compiles every `src/*.cpp` listed in `meson.build` (except `main.cpp` and `makeImage.cpp`), plus the files above and `r8bbase.cpp`, with `-pthread`. Links two outputs: `build/sapf.mjs` (browser, with `-sAUDIO_WORKLET -sWASM_WORKERS`) and `build/sapf-node.mjs` (Node, no audio output). `sapf-prelude.txt` is embedded. Thread stacks are 2 MB (Emscripten's default of 64 KB is too small for sapf); the audio worklet stack is 1 MB. |
+| `build-deps.sh` | Downloads xsimd, eigen, fftw and libsndfile (checking SHA-256 hashes) into `$DEPS`, and builds fftw and libsndfile as static wasm libraries with `-pthread` into `$DEPS/prefix`. |
+| `build.sh` | Compiles every `src/*.cpp` listed in `meson.build` (except `main.cpp`), plus `sapf_web.cpp`, `audio_worklet.cpp` and `r8bbase.cpp`, with `-pthread`. Links fftw and libsndfile from `$DEPS/prefix` and libjpeg from Emscripten's port (`-sUSE_LIBJPEG=1`, fetched by Emscripten on first use). Exports `FS` so the page can reach files. Links two outputs: `build/sapf.mjs` (browser, with `-sAUDIO_WORKLET -sWASM_WORKERS`) and `build/sapf-node.mjs` (Node, no audio output). `sapf-prelude.txt` is embedded. Thread stacks are 2 MB (Emscripten's default of 64 KB is too small for sapf); the audio worklet stack is 1 MB. |
 | `smoke.mjs` | Node test (assert-based), using `build/sapf-node.mjs`. |
 | `serve.py` | Dev server with the cross-origin isolation headers. |
 | `index.html` | Demo page: code editor, Run/Stop buttons and log. |
@@ -106,19 +118,17 @@ You need:
 1. [emsdk](https://emscripten.org/docs/getting_started/downloads.html), installed and activated
    (`source ~/emsdk/emsdk_env.sh`).
 2. The r8brain submodule: `git submodule update --init`.
-3. A `DEPS` folder with these header-only libraries and headers:
+3. CMake (for building fftw and libsndfile).
 
+Prepare the dependencies once. This downloads xsimd 13.2.0, eigen 3.4.0, fftw 3.3.10 and
+libsndfile 1.2.2, checks their hashes, and builds fftw and libsndfile for wasm. It takes about
+two minutes:
+
+```bash
+DEPS=/path/to/deps web/build-deps.sh
 ```
-$DEPS/xsimd-13.2.0/   https://github.com/xtensor-stack/xsimd/archive/refs/tags/13.2.0.tar.gz
-$DEPS/eigen-3.4.0/    https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.bz2
-$DEPS/inc/fftw3.h     api/fftw3.h from https://www.fftw.org/fftw-3.3.10.tar.gz
-$DEPS/inc/sndfile.h   an installed libsndfile 1.2.x header (for example from Homebrew)
-```
 
-Only headers are used from fftw and libsndfile. Their code is replaced by `fftw_shim.cpp` and
-`stubs.cpp`.
-
-Build and test (a full build takes about 15 seconds):
+Then build and test (a full build takes about 15 seconds):
 
 ```bash
 DEPS=/path/to/deps web/build.sh
@@ -137,16 +147,16 @@ Esc stops the sound.
 
 ## Next steps
 
-1. **Build the real libraries.** Build libsndfile and fftw (or pocketfft) for wasm and remove the
-   stubs. That enables sound files and `record`. Use `-sUSE_LIBJPEG=1` for images.
+1. **Add file access.** Add download links for recordings and spectrograms, and file upload for
+   `sf>`. Keep user files in IDBFS so they survive a reload, and preload `sapf-examples.txt`.
 2. **Test under load.** Run `sapf-examples.txt` in the browser. Test `go` threads that touch
    playing lists, and test Firefox and Safari.
 3. **Move the build into meson.** Use an Emscripten cross file and a `web` option that turns off
    rtaudio, rtmidi, libedit and OSC, and get xsimd and eigen from the existing wraps.
 4. **Write a proper Web Audio backend.** Replace the RtAudio shim with a `#ifdef __EMSCRIPTEN__`
    backend in `src/Play.cpp`, next to the AudioToolbox and RtAudio ones.
-5. **Add file access.** Preload `sapf-examples.txt` and keep user files in IDBFS. Replace the
-   `system("open …")` calls with browser downloads.
+5. **Add compressed formats.** Build libogg, libvorbis, FLAC and Opus for wasm and turn on
+   libsndfile's external libraries, if those formats are needed.
 
 ## Licence
 

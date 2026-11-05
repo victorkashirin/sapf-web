@@ -23,6 +23,10 @@ extern void AddMidiOps();
 extern void AddOscOps();
 void loadFile(Thread& th, const char* filename);
 
+// Ops like sgram, >sfo and prelude run `open <file>` through system(). A browser has nothing to
+// open, and under Node Emscripten's system() would run the command on the host shell, so refuse.
+extern "C" int system(const char*) { return -1; }
+
 static Thread* gThread;
 static std::mutex gQueueMutex;
 static std::condition_variable gQueueCV;

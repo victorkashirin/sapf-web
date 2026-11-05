@@ -61,5 +61,30 @@ assert.match(out, /from go/, 'go thread ran');
 await evalSapf('stop');
 assert.equal(sapf._sapf_num_playing(), 0, 'stop removes stream');
 
-console.log(`OK  rms=${rms.toFixed(4)} freq≈${crossings}Hz  rendered 1s in ${ms.toFixed(1)}ms while eval slept; go works`);
+// Sound files through libsndfile (Emscripten's in-memory FS; recordings go to /tmp)
+await evalSapf('clear 440 0 sinosc .3 * 4800 N "t" >sf');
+assert.equal(sapf.FS.stat('/tmp/t.wav').size, 80 + 4800 * 4, '>sf writes 4800 float frames');
+const readBack = (await evalSapf('"/tmp/t.wav" sf> 3 N')).match(/-?[\d.e-]+/g).map(Number);
+[0, 1, 2].forEach(i => assert.ok(Math.abs(readBack[i] - 0.3 * Math.sin(2 * Math.PI * 440 * i / SR)) < 1e-6, 'sf> reads back: ' + readBack));
+
+// `record` plays and writes through the async writer thread
+await evalSapf('clear 440 0 sinosc .3 * "rec" record');
+const recBlocks = 200;
+for (let b = 0; b < recBlocks; ++b) sapf._sapf_render(ptr, frames, ch);
+await evalSapf('stop');
+for (let i = 0; i < 100 && !sapf.FS.analyzePath('/tmp/rec.wav').exists; ++i) await sleepMs(10);
+const recFrames = (sapf.FS.stat('/tmp/rec.wav').size - 80) / 4;
+assert.equal(recFrames, recBlocks * frames, 'record wrote every rendered frame');
+const recStart = (await evalSapf('"/tmp/rec.wav" sf> 3 N')).match(/-?[\d.e-]+/g).map(Number);
+[0, 1, 2].forEach(i => assert.ok(Math.abs(recStart[i] - 0.3 * Math.sin(2 * Math.PI * 440 * i / SR)) < 1e-6, 'recording holds the sine: ' + recStart));
+await evalSapf('clear');
+
+// Spectrogram JPEG through libjpeg; its `open` call must not reach the host shell
+const sgramOut = await evalSapf('clear 440 0 sinosc 4800 N -60 "spec" sgram');
+const jpg = sapf.FS.readFile('/tmp/spec-60.jpg');
+assert.deepEqual([...jpg.subarray(0, 3)], [0xff, 0xd8, 0xff], 'sgram writes a JPEG');
+assert.doesNotMatch(sgramOut, /does not exist/, 'system() did not run on the host');
+
+console.log(`OK  rms=${rms.toFixed(4)} freq≈${crossings}Hz  rendered 1s in ${ms.toFixed(1)}ms while eval slept; go works;` +
+  ` >sf/sf> ok; record wrote ${recFrames} frames; sgram jpeg ${jpg.length} bytes`);
 process.exit(0); // pthread workers keep Node alive
