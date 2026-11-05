@@ -17,8 +17,11 @@ What works:
   - `node web/smoke.mjs`: prelude loads; `fft` of a shifted impulse gives the exact expected
     spectrum; `440 0 sinosc .3 * play` renders with the right level (RMS 0.212) and
     pitch (440 Hz); `stop` removes the stream. One second of audio renders in about 1.2 ms.
-  - In the browser: `[300 1200] 0 sinosc .3 * play` gives 300 Hz on the left channel and
-    1200 Hz on the right, both at the expected level.
+  - In the browser (Chromium, through the AudioWorklet): `[300 1200] 0 sinosc .3 * play` gives
+    300 Hz on the left channel and 1200 Hz on the right, both at the expected level.
+    Syntax errors are printed to the page log.
+- Audio renders on the browser's audio thread, not the main thread. The whole engine runs inside
+  an `AudioWorkletProcessor`, so a busy page does not interrupt the sound.
 
 What does not work yet:
 
@@ -36,8 +39,13 @@ What does not work yet:
 
 Known limits of the current approach:
 
-- **Audio runs on the main thread.** `index.html` uses `ScriptProcessorNode`, a deprecated API.
-  Heavy work in the page (or a slow evaluation) can cause audio dropouts.
+- **Evaluation shares the audio thread.** Code is evaluated in the worklet between two render
+  quanta (128 frames, about 3 ms). Building a graph is usually fast, but a slow evaluation (for
+  example a long non-real-time computation) stops the audio until it finishes. The native app
+  evaluates on a separate thread; the web build needs pthreads for that (see "Next steps").
+- **Only tested in Chromium.** Firefox and Safari also support ES-module AudioWorklets, but this
+  was not checked. The worklet adds fallbacks for `performance.now` and `crypto.getRandomValues`
+  in case the worklet scope lacks them.
 - **The FFT is a simple radix-2 FFT.** It is correct, but slower than fftw. sapf only asks for
   power-of-two sizes; other sizes abort.
 - **Only a few ops were tested.** `sapf-examples.txt` has not been run in the browser.
@@ -50,10 +58,18 @@ sapf's audio model: the audio callback pulls samples from lazy lists (`ZIn::fill
 `src/Play.cpp`), so the graph is evaluated on the audio thread. The web build keeps this model:
 
 ```
-browser audio callback ──> sapf_render(out, frames, channels)
-                              └─> for each open RtAudio "stream": rtPlayerBackendCallback (src/Play.cpp)
-                                     └─> fillBufferList ──> ZIn::fill (lazy graph)
+main thread (index.html)                 audio thread (sapf-worklet.js, owns the wasm module)
+  fetch sapf.wasm, addModule  ─────────>  instantiate wasm, sapf_init (loads prelude)
+  port.postMessage({eval})    ─────────>  sapf_eval(code)           (between render quanta)
+  log  <──────────────────────────────── port.postMessage({print})
+                                          process() every 128 frames:
+                                            sapf_render(out, frames, channels)
+                                              └─> each open RtAudio "stream": rtPlayerBackendCallback (src/Play.cpp)
+                                                     └─> fillBufferList ──> ZIn::fill (lazy graph)
 ```
+
+The worklet scope has no `fetch`, so the page downloads `sapf.wasm` and passes the bytes in
+`processorOptions`. The worklet compiles them through Emscripten's `instantiateWasm` hook.
 
 | File | Purpose |
 |---|---|
@@ -65,7 +81,8 @@ browser audio callback ──> sapf_render(out, frames, channels)
 | `stubs.cpp` | Stubs for libsndfile and `Bitmap` (JPEG). |
 | `build.sh` | Compiles every `src/*.cpp` listed in `meson.build` (except `main.cpp` and `makeImage.cpp`), plus the files above and `r8bbase.cpp`, and links `build/sapf.mjs` and `build/sapf.wasm`. `sapf-prelude.txt` is embedded. |
 | `smoke.mjs` | Node test (assert-based). |
-| `index.html` | Demo page: code editor, Run/Stop buttons and log. |
+| `sapf-worklet.js` | `AudioWorkletProcessor` that hosts the wasm module. Takes `{type:'eval', code}` messages; sends `{type:'print'}`, `{type:'playing'}` and `{type:'ready'}` back. |
+| `index.html` | Demo page: code editor, Run/Stop buttons and log. It creates the `AudioWorkletNode` and forwards code to it. |
 
 ## Building
 
@@ -104,9 +121,10 @@ Esc stops the sound.
 
 ## Next steps
 
-1. **Move audio off the main thread.** Build with `-pthread -sAUDIO_WORKLET -sWASM_WORKERS`.
-   Run the interpreter in a Worker and call `sapf_render` from a Wasm Audio Worklet over shared
-   memory. This also makes `go`, `sleep` and recording work. It requires:
+1. **Move evaluation off the audio thread.** Audio already runs in an AudioWorklet, but
+   evaluation runs there too. Build with `-pthread -sAUDIO_WORKLET -sWASM_WORKERS`, run the
+   interpreter in a Worker, and call `sapf_render` from a Wasm Audio Worklet over shared memory.
+   This also makes `go`, `sleep` and recording work. It requires:
    - The page must be served with cross-origin isolation headers
      (`Cross-Origin-Opener-Policy: same-origin`, `Cross-Origin-Embedder-Policy: require-corp`)
      for `SharedArrayBuffer`.

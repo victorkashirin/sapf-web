@@ -15,28 +15,27 @@ stop
 <p><button id="run">Run</button> <button id="stop">Stop</button></p>
 <pre id="log"></pre>
 <script type="module">
-import createSapf from './build/sapf.mjs';
 
 const log = document.getElementById('log'), code = document.getElementById('code');
 const print = s => { log.textContent += s + '\n'; log.scrollTop = log.scrollHeight; };
-let sapf, ctx;
+let ctx, node, booting;
 
-async function boot() {
-  if (sapf) return;
-  ctx = new AudioContext();
-  sapf = await createSapf({ print, printErr: print });
-  sapf.ccall('sapf_init', null, ['number', 'string'], [ctx.sampleRate, 'sapf-prelude.txt']);
-  // shortcut: ScriptProcessorNode runs the engine on the main thread (deprecated API, UI jank can glitch audio);
-  // upgrade to an AudioWorklet (Emscripten -sAUDIO_WORKLET + pthreads) for a real port.
-  const frames = 1024, ch = 2, node = ctx.createScriptProcessor(frames, 0, ch);
-  const ptr = sapf._malloc(frames * ch * 4);
-  node.onaudioprocess = e => {
-    sapf._sapf_render(ptr, frames, ch);
-    for (let c = 0; c < ch; ++c)
-      e.outputBuffer.getChannelData(c).set(sapf.HEAPF32.subarray(ptr / 4 + c * frames, ptr / 4 + (c + 1) * frames));
-  };
-  node.connect(ctx.destination);
-  window.sapf = sapf; window.sapfCtx = ctx; window.sapfNode = node; // for debugging in devtools
+// The engine lives in an AudioWorklet (sapf-worklet.js); this page only sends code and shows output.
+function boot() {
+  return booting ??= (async () => {
+    ctx = new AudioContext();
+    const [wasmBytes] = await Promise.all([
+      fetch('build/sapf.wasm').then(r => r.arrayBuffer()),
+      ctx.audioWorklet.addModule('sapf-worklet.js'),
+    ]);
+    node = new AudioWorkletNode(ctx, 'sapf', {
+      numberOfInputs: 0, outputChannelCount: [2],
+      processorOptions: { wasmBytes, preludeFile: 'sapf-prelude.txt' },
+    });
+    node.port.onmessage = e => { if (e.data.type === 'print') print(e.data.text); };
+    node.connect(ctx.destination);
+    window.sapfCtx = ctx; window.sapfNode = node; // for debugging in devtools
+  })();
 }
 
 function currentCode() {
@@ -50,7 +49,7 @@ async function run(src) {
   await boot();
   await ctx.resume();
   print('> ' + src.trim());
-  sapf.ccall('sapf_eval', null, ['string'], [src + '\n']);
+  node.port.postMessage({ type: 'eval', code: src + '\n' });
 }
 
 document.getElementById('run').onclick = () => run(currentCode());
