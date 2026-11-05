@@ -1,0 +1,62 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>sapf web</title>
+<style>
+  body { font: 14px ui-monospace, monospace; margin: 16px; max-width: 900px; }
+  textarea { width: 100%; height: 160px; font: inherit; box-sizing: border-box; }
+  pre { background: #f4f4f4; padding: 8px; height: 280px; overflow: auto; white-space: pre-wrap; }
+</style>
+<h3>sapf (wasm spike)</h3>
+<p>Ctrl/Cmd+Enter evaluates the selection (or the current line). Esc stops sound.</p>
+<textarea id="code" spellcheck="false">440 0 sinosc .3 * play
+stop
+[300 301] 0 sinosc 8 0 lfsaw .5 * * play
+</textarea>
+<p><button id="run">Run</button> <button id="stop">Stop</button></p>
+<pre id="log"></pre>
+<script type="module">
+import createSapf from './build/sapf.mjs';
+
+const log = document.getElementById('log'), code = document.getElementById('code');
+const print = s => { log.textContent += s + '\n'; log.scrollTop = log.scrollHeight; };
+let sapf, ctx;
+
+async function boot() {
+  if (sapf) return;
+  ctx = new AudioContext();
+  sapf = await createSapf({ print, printErr: print });
+  sapf.ccall('sapf_init', null, ['number', 'string'], [ctx.sampleRate, 'sapf-prelude.txt']);
+  // shortcut: ScriptProcessorNode runs the engine on the main thread (deprecated API, UI jank can glitch audio);
+  // upgrade to an AudioWorklet (Emscripten -sAUDIO_WORKLET + pthreads) for a real port.
+  const frames = 1024, ch = 2, node = ctx.createScriptProcessor(frames, 0, ch);
+  const ptr = sapf._malloc(frames * ch * 4);
+  node.onaudioprocess = e => {
+    sapf._sapf_render(ptr, frames, ch);
+    for (let c = 0; c < ch; ++c)
+      e.outputBuffer.getChannelData(c).set(sapf.HEAPF32.subarray(ptr / 4 + c * frames, ptr / 4 + (c + 1) * frames));
+  };
+  node.connect(ctx.destination);
+  window.sapf = sapf; window.sapfCtx = ctx; window.sapfNode = node; // for debugging in devtools
+}
+
+function currentCode() {
+  const { selectionStart: a, selectionEnd: b, value: v } = code;
+  if (a !== b) return v.slice(a, b);
+  const s = v.lastIndexOf('\n', a - 1) + 1, e = v.indexOf('\n', a);
+  return v.slice(s, e < 0 ? v.length : e);
+}
+
+async function run(src) {
+  await boot();
+  await ctx.resume();
+  print('> ' + src.trim());
+  sapf.ccall('sapf_eval', null, ['string'], [src + '\n']);
+}
+
+document.getElementById('run').onclick = () => run(currentCode());
+document.getElementById('stop').onclick = () => run('stop');
+code.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); run(currentCode()); }
+  if (e.key === 'Escape') run('stop');
+});
+</script>
