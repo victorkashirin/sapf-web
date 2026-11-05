@@ -17,7 +17,7 @@ jobs:
   web:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -30,7 +30,7 @@ jobs:
       # Restore and save are separate so the cache is kept even if a later step (tests, deploy) fails.
       - name: Restore wasm dependencies
         id: deps
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: web/deps
           key: web-deps-${{ env.EMSDK_VERSION }}-${{ hashFiles('web/build-deps.sh') }}
@@ -41,7 +41,7 @@ jobs:
 
       - name: Save wasm dependencies
         if: steps.deps.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: web/deps
           key: ${{ steps.deps.outputs.cache-primary-key }}
@@ -66,12 +66,10 @@ jobs:
       - name: Deploy to Cloudflare
         # Prereleases get the zip but do not replace the live site.
         if: ${{ !github.event.release.prerelease }}
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          # The v3 action defaults to wrangler 3.90, which cannot deploy an assets-only Worker or read _headers.
-          wranglerVersion: "4"
           workingDirectory: web
           command: deploy
 
