@@ -1,9 +1,17 @@
-// Web entry point: replaces src/main.cpp. JS calls sapf_init, sapf_eval and sapf_render.
+// Web entry point: replaces src/main.cpp.
+// JS calls sapf_init once, then sapf_eval to queue code. Code runs on a dedicated evaluation
+// thread (like the REPL thread in src/main.cpp), so a slow evaluation blocks neither the page
+// nor the audio. The audio side calls sapf_render (see audio_worklet.cpp and web/smoke.mjs).
 #include "VM.hpp"
 #include "ErrorCodes.hpp"
 #include <RtAudio.h>
 #include <emscripten/emscripten.h>
 #include <locale.h>
+#include <atomic>
+#include <condition_variable>
+#include <deque>
+#include <string>
+#include <thread>
 
 extern void AddCoreOps();
 extern void AddMathOps();
@@ -16,27 +24,13 @@ extern void AddOscOps();
 void loadFile(Thread& th, const char* filename);
 
 static Thread* gThread;
-
-extern "C" {
-
-EMSCRIPTEN_KEEPALIVE void sapf_init(double sampleRate, const char* preludeFile)
-{
-	setlocale(LC_NUMERIC, "C");
-	vm.setSampleRate(sampleRate);
-	AddCoreOps();
-	AddMathOps();
-	AddStreamOps();
-	AddRandomOps();
-	AddUGenOps();
-	AddMidiOps();
-	AddOscOps();
-	AddSetOps();
-	gThread = new Thread();
-	if (preludeFile && *preludeFile) loadFile(*gThread, preludeFile);
-}
+static std::mutex gQueueMutex;
+static std::condition_variable gQueueCV;
+static std::deque<std::string> gQueue;
+static std::atomic<int> gPending{0}; // queued + running evaluations
 
 // Same as one iteration of Thread::repl, with the line taken from a string.
-EMSCRIPTEN_KEEPALIVE void sapf_eval(const char* code)
+static void evalNow(const char* code)
 {
 	Thread& th = *gThread;
 	try {
@@ -55,13 +49,63 @@ EMSCRIPTEN_KEEPALIVE void sapf_eval(const char* code)
 	}
 }
 
+static void evalLoop(std::string preludeFile)
+{
+	if (!preludeFile.empty()) loadFile(*gThread, preludeFile.c_str());
+	--gPending;
+	for (;;) {
+		std::string code;
+		{
+			std::unique_lock<std::mutex> lock(gQueueMutex);
+			gQueueCV.wait(lock, [] { return !gQueue.empty(); });
+			code = std::move(gQueue.front());
+			gQueue.pop_front();
+		}
+		evalNow(code.c_str());
+		--gPending;
+	}
+}
+
+extern "C" {
+
+EMSCRIPTEN_KEEPALIVE void sapf_init(double sampleRate, const char* preludeFile)
+{
+	setlocale(LC_NUMERIC, "C");
+	vm.setSampleRate(sampleRate);
+	AddCoreOps();
+	AddMathOps();
+	AddStreamOps();
+	AddRandomOps();
+	AddUGenOps();
+	AddMidiOps();
+	AddOscOps();
+	AddSetOps();
+	gThread = new Thread();
+	gPending = 1; // the prelude
+	std::thread(evalLoop, std::string(preludeFile ? preludeFile : "")).detach();
+}
+
+// Queues code for the evaluation thread and returns at once. Output arrives through print.
+EMSCRIPTEN_KEEPALIVE void sapf_eval(const char* code)
+{
+	++gPending;
+	{
+		std::lock_guard<std::mutex> lock(gQueueMutex);
+		gQueue.emplace_back(code);
+	}
+	gQueueCV.notify_one();
+}
+
+// Non-zero while the prelude or queued code has not finished evaluating.
+EMSCRIPTEN_KEEPALIVE int sapf_busy() { return gPending.load(); }
+
 // Pull `frames` frames from every playing stream, summed into planar `out` [channels][frames].
 EMSCRIPTEN_KEEPALIVE void sapf_render(float* out, int frames, int channels)
 {
-	static std::vector<float> tmp;
+	static std::vector<float> tmp; // only ever used by the audio thread
 	memset(out, 0, sizeof(float) * frames * channels);
-	auto streams = RtAudio::streams(); // copy: a callback must not invalidate our iteration
-	for (auto& s : streams) {
+	std::lock_guard<std::mutex> lock(RtAudio::streamsMutex());
+	for (auto& s : RtAudio::streams()) {
 		tmp.assign((size_t)frames * s.nChannels, 0.f);
 		s.cb(tmp.data(), nullptr, frames, 0., 0, s.user);
 		for (int c = 0; c < channels && c < (int)s.nChannels; ++c)
@@ -69,6 +113,10 @@ EMSCRIPTEN_KEEPALIVE void sapf_render(float* out, int frames, int channels)
 	}
 }
 
-EMSCRIPTEN_KEEPALIVE int sapf_num_playing() { return (int)RtAudio::streams().size(); }
+EMSCRIPTEN_KEEPALIVE int sapf_num_playing()
+{
+	std::lock_guard<std::mutex> lock(RtAudio::streamsMutex());
+	return (int)RtAudio::streams().size();
+}
 
 }

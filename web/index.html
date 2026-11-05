@@ -18,24 +18,19 @@ stop
 
 const log = document.getElementById('log'), code = document.getElementById('code');
 const print = s => { log.textContent += s + '\n'; log.scrollTop = log.scrollHeight; };
-let ctx, node, booting;
+import createSapf from './build/sapf.mjs';
 
-// The engine lives in an AudioWorklet (sapf-worklet.js); this page only sends code and shows output.
-function boot() {
-  return booting ??= (async () => {
-    ctx = new AudioContext();
-    const [wasmBytes] = await Promise.all([
-      fetch('build/sapf.wasm').then(r => r.arrayBuffer()),
-      ctx.audioWorklet.addModule('sapf-worklet.js'),
-    ]);
-    node = new AudioWorkletNode(ctx, 'sapf', {
-      numberOfInputs: 0, outputChannelCount: [2],
-      processorOptions: { wasmBytes, preludeFile: 'sapf-prelude.txt' },
-    });
-    node.port.onmessage = e => { if (e.data.type === 'print') print(e.data.text); };
-    node.connect(ctx.destination);
-    window.sapfCtx = ctx; window.sapfNode = node; // for debugging in devtools
-  })();
+// Code is evaluated on a wasm pthread and audio renders in a Wasm Audio Worklet; both share
+// memory, which needs cross-origin isolation (serve with web/serve.py).
+if (!crossOriginIsolated) print('This page needs cross-origin isolation (COOP/COEP headers). Serve it with web/serve.py.');
+const sapfReady = createSapf({ print, printErr: print });
+let sapf, ctx;
+
+async function boot() {
+  if (ctx) return;
+  sapf = await sapfReady;
+  ctx = sapf.emscriptenGetAudioObject(sapf.ccall('sapf_start_audio', 'number', ['string'], ['sapf-prelude.txt']));
+  window.sapf = sapf; window.sapfCtx = ctx; // for debugging in devtools
 }
 
 function currentCode() {
@@ -49,7 +44,7 @@ async function run(src) {
   await boot();
   await ctx.resume();
   print('> ' + src.trim());
-  node.port.postMessage({ type: 'eval', code: src + '\n' });
+  sapf.ccall('sapf_eval', null, ['string'], [src + '\n']);
 }
 
 document.getElementById('run').onclick = () => run(currentCode());

@@ -6,6 +6,7 @@
 #include <vector>
 #include <algorithm>
 #include <iostream> // Play.cpp relies on the real RtAudio.h pulling this in
+#include <mutex>
 
 typedef unsigned long RtAudioFormat;
 typedef unsigned int RtAudioStreamFlags;
@@ -23,6 +24,9 @@ public:
 
 	struct Stream { RtAudioCallback cb; void* user; unsigned int nChannels; };
 	static std::vector<Stream>& streams() { static std::vector<Stream> s; return s; }
+	// Guards streams(). sapf_render holds it for the whole render, so closeStream waits for a
+	// running callback to finish before Play.cpp deletes the Player (like a real stopStream).
+	static std::mutex& streamsMutex() { static std::mutex m; return m; }
 
 	unsigned int getDeviceCount() { return 1; }
 	unsigned int getDefaultOutputDevice() { return 0; }
@@ -30,6 +34,7 @@ public:
 	int openStream(StreamParameters* out, StreamParameters*, RtAudioFormat, unsigned int,
 	               unsigned int*, RtAudioCallback cb, void* user, StreamOptions* = nullptr) {
 		mUser = user;
+		std::lock_guard<std::mutex> lock(streamsMutex());
 		streams().push_back({cb, user, out->nChannels});
 		mOpen = true;
 		return 0;
@@ -38,6 +43,7 @@ public:
 	int stopStream() { return 0; }
 	int abortStream() { return 0; }
 	void closeStream() {
+		std::lock_guard<std::mutex> lock(streamsMutex());
 		auto& s = streams();
 		s.erase(std::remove_if(s.begin(), s.end(), [&](const Stream& x) { return x.user == mUser; }), s.end());
 		mOpen = false;
