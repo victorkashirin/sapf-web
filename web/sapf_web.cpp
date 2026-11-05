@@ -109,12 +109,21 @@ EMSCRIPTEN_KEEPALIVE void sapf_render(float* out, int frames, int channels)
 	static std::vector<float> tmp; // only ever used by the audio thread
 	memset(out, 0, sizeof(float) * frames * channels);
 	std::lock_guard<std::mutex> lock(RtAudio::streamsMutex());
-	for (auto& s : RtAudio::streams()) {
+	auto& streams = RtAudio::streams();
+	for (auto& s : streams) {
 		tmp.assign((size_t)frames * s.nChannels, 0.f);
 		s.cb(tmp.data(), nullptr, frames, 0., 0, s.user);
-		for (int c = 0; c < channels && c < (int)s.nChannels; ++c)
-			for (int i = 0; i < frames; ++i) out[c * frames + i] += tmp[c * frames + i];
+		int fadeStart = s.fadeLeft;
+		for (int c = 0; c < channels && c < (int)s.nChannels; ++c) {
+			float* src = tmp.data() + c * frames;
+			if (fadeStart >= 0) // linear fade-out requested by RtAudio::stopStream, then silence
+				for (int i = 0; i < frames; ++i) src[i] *= i < fadeStart ? (float)(fadeStart - i) / s.fadeTotal : 0.f;
+			for (int i = 0; i < frames; ++i) out[c * frames + i] += src[i];
+		}
+		if (fadeStart >= 0) s.fadeLeft = std::max(0, fadeStart - frames);
 	}
+	// faded out: drop it so the waiting stopStream returns and Play.cpp can delete the Player
+	streams.erase(std::remove_if(streams.begin(), streams.end(), [](const RtAudio::Stream& s) { return s.fadeLeft == 0; }), streams.end());
 }
 
 EMSCRIPTEN_KEEPALIVE int sapf_num_playing()

@@ -52,14 +52,27 @@ assert.ok(Math.abs(crossings - 440) <= 1, `freq ${crossings}`);
 await idle();
 assert.match(out, /woke/, 'sleep returns and evaluation continues');
 
+// `stop` fades out (RtAudio shim) instead of cutting, which clicks. Keep rendering while it stops:
+// the output must never jump by more than the sine's own steepest step (0.3 * 2pi * 440 / SR = 0.0173).
+sapf.ccall('sapf_eval', null, ['string'], ['stop\n']);
+const tail = [left[left.length - 1]];
+for (let b = 0; b < 400 && sapf._sapf_num_playing(); ++b) {
+  sapf._sapf_render(ptr, frames, ch);
+  tail.push(...sapf.HEAPF32.subarray(ptr / 4, ptr / 4 + frames));
+  if (b % 4 === 3) await sleepMs(0); // let the evaluation thread run
+}
+assert.equal(sapf._sapf_num_playing(), 0, 'stop removes stream');
+let maxStep = 0;
+for (let i = 1; i < tail.length; ++i) maxStep = Math.max(maxStep, Math.abs(tail[i] - tail[i - 1]));
+assert.ok(maxStep < 0.02, `stop clicks: jump of ${maxStep}`);
+assert.equal(tail[tail.length - 1], 0, 'silent after the fade');
+await idle();
+
 // `go` runs a function on a new thread
 out = '';
 sapf.ccall('sapf_eval', null, ['string'], ['\\[.2 sleep "from go" pr cr] go\n']);
 for (let i = 0; i < 100 && !/from go/.test(out); ++i) await sleepMs(10);
 assert.match(out, /from go/, 'go thread ran');
-
-await evalSapf('stop');
-assert.equal(sapf._sapf_num_playing(), 0, 'stop removes stream');
 
 // Sound files through libsndfile (Emscripten's in-memory FS; recordings go to /tmp)
 await evalSapf('clear 440 0 sinosc .3 * 4800 N "t" >sf');
