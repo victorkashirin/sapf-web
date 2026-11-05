@@ -4,12 +4,14 @@
 #   web/build/sapf.mjs       browser build (needs cross-origin isolation, see web/serve.py)
 #   web/build/sapf-node.mjs  Node build without audio output, for web/smoke.mjs
 #   web/build/test_sapf.js   sapf's C++ doctest suite (test/*.cpp); run: node web/build/test_sapf.js
-# usage: DEPS=/path/to/deps web/build.sh   (prepare DEPS once with web/build-deps.sh)
+# usage: web/build.sh   (prepare deps once with web/build-deps.sh; DEPS defaults to web/deps)
 # SANITIZE=address (or undefined, ...) builds the two Node outputs with that sanitizer into
 # web/build-<sanitizer>/ instead; run smoke.mjs against it with SAPF_NODE_MODULE.
 set -e
 cd "$(dirname "$0")/.."
-: "${DEPS:?set DEPS to the directory prepared by web/build-deps.sh}"
+DEPS="${DEPS:-$PWD/web/deps}"
+# An emscripten config in $DEPS is used when EM_CONFIG is unset (e.g. Homebrew's emscripten lost its own)
+[ -z "$EM_CONFIG" ] && [ -f "$DEPS/emscripten-config" ] && export EM_CONFIG="$DEPS/emscripten-config"
 OUT=web/build${SANITIZE:+-$SANITIZE}; rm -rf $OUT/obj; mkdir -p $OUT/obj
 SAN="${SANITIZE:+-fsanitize=$SANITIZE -g}"
 

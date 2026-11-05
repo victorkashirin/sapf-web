@@ -2,9 +2,11 @@
 # Download and build sapf's web dependencies with Emscripten into $DEPS.
 # Header-only: xsimd, eigen, doctest (for the C++ tests). Built as static wasm libraries (with -pthread, since sapf's web build
 # uses shared memory): fftw3 (double precision) and libsndfile (WAV/AIFF/etc., no external codecs).
-# usage: DEPS=/path/to/deps web/build-deps.sh
+# usage: web/build-deps.sh   (DEPS defaults to web/deps, which is gitignored)
 set -e
-: "${DEPS:?set DEPS to the directory to download and build dependencies in}"
+DEPS="${DEPS:-$(cd "$(dirname "$0")" && pwd)/deps}"
+# An emscripten config in $DEPS is used when EM_CONFIG is unset (e.g. Homebrew's emscripten lost its own)
+[ -z "$EM_CONFIG" ] && [ -f "$DEPS/emscripten-config" ] && export EM_CONFIG="$DEPS/emscripten-config"
 mkdir -p "$DEPS" && cd "$DEPS"
 PREFIX="$DEPS/prefix"
 

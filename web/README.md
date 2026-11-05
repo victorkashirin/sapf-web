@@ -143,16 +143,16 @@ You need:
 
 Prepare the dependencies once. This downloads xsimd 13.2.0, eigen 3.4.0, doctest 2.4.11,
 fftw 3.3.10 and libsndfile 1.2.2, checks their hashes, and builds fftw and libsndfile for wasm. It takes about
-two minutes:
+two minutes. The dependencies go into `web/deps` (gitignored), or into `$DEPS` if you set it (an absolute path):
 
 ```bash
-DEPS=/path/to/deps web/build-deps.sh
+web/build-deps.sh
 ```
 
 Then build and test (a full build takes about 15 seconds):
 
 ```bash
-DEPS=/path/to/deps web/build.sh
+web/build.sh
 node web/smoke.mjs
 node web/build/test_sapf.js
 ```
@@ -173,7 +173,7 @@ Wasm does not trap on most out-of-bounds or use-after-free accesses inside its m
 silently corrupt data. So the Node builds can be built with a sanitizer:
 
 ```bash
-SANITIZE=address DEPS=/path/to/deps web/build.sh      # builds into web/build-address/
+SANITIZE=address web/build.sh      # builds into web/build-address/
 SAPF_NODE_MODULE=./build-address/sapf-node.mjs node web/smoke.mjs
 node web/build-address/test_sapf.js
 node web/run-examples.mjs web/build-address/sapf-node.mjs   # every example in sapf-examples.txt
