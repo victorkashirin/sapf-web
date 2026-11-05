@@ -1,0 +1,4 @@
+# SharedArrayBuffer (pthreads, Wasm Audio Worklet) needs cross-origin isolation; web/serve.py sends the same headers.
+/*
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: require-corp
