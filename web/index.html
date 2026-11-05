@@ -34,6 +34,8 @@ const controls = document.getElementById('controls'), rows = [];
 const fmt = v => String(+v.toPrecision(4));
 function onSapfSlider(id, name, lo, hi, value, exp) {
   let row = rows[id];
+  // Same range: sapf left the value alone, and `value` may predate a drag in flight.
+  if (row && row.range === `${lo} ${hi} ${exp}`) return;
   if (!row) {
     row = rows[id] = document.createElement('label');
     row.innerHTML = '<span></span><input type="range" min="0" max="1" step="any"><output></output>';
@@ -42,6 +44,7 @@ function onSapfSlider(id, name, lo, hi, value, exp) {
   const [label, input, output] = row.children;
   const toValue = p => exp ? lo * (hi / lo) ** p : lo + p * (hi - lo);
   const toPos = v => hi === lo ? 0 : exp ? Math.log(v / lo) / Math.log(hi / lo) : (v - lo) / (hi - lo);
+  row.range = `${lo} ${hi} ${exp}`;
   label.textContent = name;
   input.value = toPos(value);
   output.textContent = fmt(value);
@@ -76,7 +79,7 @@ document.getElementById('stop').onclick = () => run('stop');
 // A function, not a stored signal: each use reads the slider afresh.
 document.getElementById('addSlider').onclick = () => {
   let n = 1;
-  while (code.value.includes(`"ctl${n}"`)) ++n;
+  while (code.value.includes(`"ctl${n}"`) || rows.some(r => r.firstChild.textContent === `ctl${n}`)) ++n;
   const line = `\\["ctl${n}" 0 1 .5 slider] = ctl${n}`;
   const at = code.value.lastIndexOf('\n', code.selectionStart - 1) + 1;
   code.setRangeText(line + '\n', at, at);

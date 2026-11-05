@@ -6,7 +6,6 @@
 #include "ErrorCodes.hpp"
 #include <RtAudio.h>
 #include <emscripten/emscripten.h>
-#include <emscripten/threading.h>
 #include <locale.h>
 #include <algorithm>
 #include <atomic>
