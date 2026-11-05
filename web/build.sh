@@ -3,6 +3,7 @@
 # Wasm Audio Worklet (audio thread). Outputs:
 #   web/build/sapf.mjs       browser build (needs cross-origin isolation, see web/serve.py)
 #   web/build/sapf-node.mjs  Node build without audio output, for web/smoke.mjs
+#   web/build/editor.js      the page's code editor (CodeMirror), see web/editor.js
 #   web/build/test_sapf.js   sapf's C++ doctest suite (test/*.cpp); run: node web/build/test_sapf.js
 # usage: web/build.sh   (prepare deps once with web/build-deps.sh; DEPS defaults to web/deps)
 # SANITIZE=address (or undefined, ...) builds the two Node outputs with that sanitizer into
@@ -48,4 +49,11 @@ em++ $OBJS -o $OUT/sapf-node.mjs $LINK -sENVIRONMENT=node -sEXPORTED_FUNCTIONS=$
 # the process exit code is the test result.
 TEST_OBJS=""; for f in $TEST_SRCS; do TEST_OBJS="$TEST_OBJS $OUT/obj/$(basename $f .cpp).o"; done
 em++ $OBJS $TEST_OBJS -o $OUT/test_sapf.js $BASE -sENVIRONMENT=node -sPROXY_TO_PTHREAD -sEXIT_RUNTIME
+# The page's editor bundle (web/editor.js) with its docs, which come from the Node build's `helpall`.
+# npm ci only when package-lock.json is newer than the last install, so later builds work offline.
+if [ -z "$SANITIZE" ]; then (
+  cd web
+  [ package-lock.json -nt node_modules/.package-lock.json ] && npm ci --no-audit --no-fund
+  npm run build
+) fi
 echo "built $(ls $OUT/*.mjs $OUT/*.js | tr '\n' ' ')"

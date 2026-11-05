@@ -151,11 +151,15 @@ main thread (index.html)        eval thread (pthread)          audio thread (Was
 | `run-examples.mjs` | Runs every example in `sapf-examples.txt` on a Node build, rendering audio for the ones that play. Stops at the first sanitizer report. |
 | `serve.py` | Dev server with the cross-origin isolation headers. |
 | `index.html` | Demo page: code editor, Run/Stop buttons and log. |
+| `editor.js` | The page's code editor: CodeMirror 6 with the features of the [vs-sapf](https://github.com/victorkashirin/vs-sapf) VS Code extension (highlighting, hover docs, completion, line/block/paragraph evaluation, formatting). `npm run build` (in `web/`, called by `build.sh`) bundles it with esbuild into `build/editor.js`. |
+| `sapf-text.mjs` | Text logic ported from vs-sapf: the line, `( )` block and paragraph under the cursor, the formatter, and the `helpall` parser. Tested by `sapf-text.test.mjs`. |
+| `gen-docs.mjs` | Runs `helpall` on `build/sapf-node.mjs` and writes `build/sapf-docs.json`, the editor's hover and completion docs, so they always match the built-ins and the prelude. |
 
 ## Building
 
 You need:
 
+1. Node.js with npm (for the editor bundle and the tests).
 1. [emsdk](https://emscripten.org/docs/getting_started/downloads.html), installed and activated
    (`source ~/emsdk/emsdk_env.sh`).
 2. The r8brain submodule: `git submodule update --init`.
@@ -174,8 +178,12 @@ Then build and test (a full build takes about 15 seconds):
 ```bash
 web/build.sh
 node web/smoke.mjs
+node web/sapf-text.test.mjs
 node web/build/test_sapf.js
 ```
+
+After changing only `editor.js` or `sapf-text.mjs`, `npm --prefix web run build` rebuilds the editor
+without recompiling sapf.
 
 Run the demo. Plain `python3 -m http.server` will not work, because it does not send the
 cross-origin isolation headers:
@@ -185,14 +193,25 @@ python3 web/serve.py 8765
 ```
 
 Then open http://localhost:8765, put the cursor on a line and press Cmd/Ctrl+Enter.
-Esc stops the sound.
+The keys follow vs-sapf:
+
+| Key | Action |
+|---|---|
+| Cmd/Ctrl+Enter | evaluate the selection or the current line |
+| Shift+Enter | evaluate the selection or the outermost `( )` block around the cursor (else the line) |
+| Cmd/Ctrl+Shift+Enter | evaluate the selection or the paragraph (text between blank lines) |
+| Esc or Cmd/Ctrl+. | `stop` |
+| Cmd/Ctrl+Shift+. | `clear` |
+| Shift+Alt+F | format (vs-sapf uses Cmd/Ctrl+Shift+I, which opens the browser's devtools) |
+
+Hovering a word shows its documentation; completion offers built-ins and prelude functions.
 
 ## Deploying
 
 `.github/workflows/web.yml` deploys the page to a Cloudflare Worker that serves static files
 (`wrangler.jsonc`). It runs when a GitHub Release is published, or by hand from the Actions tab
-("Web release"). It builds the dependencies (cached between runs), runs `build.sh`, `smoke.mjs`
-and `test_sapf.js`, copies `index.html`, `_headers`, `build/sapf.mjs` and `build/sapf.wasm` into
+("Web release"). It builds the dependencies (cached between runs), runs `build.sh`, `smoke.mjs`,
+`sapf-text.test.mjs` and `test_sapf.js`, copies `index.html`, `_headers`, `build/sapf.mjs`, `build/sapf.wasm` and `build/editor.js` into
 `web/dist`, deploys that folder with wrangler 4, and attaches it as `sapf-web.zip` to the
 release. A prerelease gets the zip but does not replace the live site.
 

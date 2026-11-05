@@ -51,13 +51,14 @@ jobs:
           source ~/emsdk/emsdk_env.sh
           web/build.sh
           node web/smoke.mjs
+          node web/sapf-text.test.mjs
           node web/build/test_sapf.js
 
       - name: Assemble site
         run: |
           mkdir -p web/dist/build
           cp web/index.html web/_headers web/dist/
-          cp web/build/sapf.mjs web/build/sapf.wasm web/dist/build/
+          cp web/build/sapf.mjs web/build/sapf.wasm web/build/editor.js web/dist/build/
           # GPL: the Source link points at the exact commit being deployed, not at main.
           sed -i "s|href=\"https://github.com/$GITHUB_REPOSITORY\">Source|href=\"https://github.com/$GITHUB_REPOSITORY/tree/$GITHUB_SHA\">Source|" web/dist/index.html
           grep -q "tree/$GITHUB_SHA\">Source" web/dist/index.html

@@ -2,3 +2,4 @@ build-*/
 deps/
 dist/
 .wrangler/
+node_modules/
