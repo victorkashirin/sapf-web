@@ -162,6 +162,7 @@
     <div class="pop">
       <div class="row"><input id="fileName" placeholder="name" aria-label="File name" spellcheck="false"><button id="save">Save</button></div>
       <button class="item" id="new">New</button>
+      <button class="item" id="export">Export</button>
       <div class="tag">saved</div>
       <div id="fileList"></div>
       <div class="tag">examples</div>
@@ -466,6 +467,15 @@ function save() {
 }
 document.getElementById('save').onclick = save;
 fileName.onkeydown = e => e.key === 'Enter' && save();
+document.getElementById('export').onclick = () => {
+  const name = (fileName.value.trim() || buf.file || buf.title).replace(/\.sapf$/i, '') + '.sapf';
+  if (downloadUrl) URL.revokeObjectURL(downloadUrl); // same one-live-blob rule as download()
+  const a = document.createElement('a');
+  a.href = downloadUrl = URL.createObjectURL(new Blob([editor.state.doc.toString()], { type: 'text/plain' }));
+  a.download = name;
+  a.click();
+  closeMenu();
+};
 document.getElementById('new').onclick = () => openText('', { title: 'untitled', dirty: false });
 for (const b of fileMenu.querySelectorAll('[data-example]')) b.onclick = async () => {
   const r = await fetch('build/' + b.dataset.example);
