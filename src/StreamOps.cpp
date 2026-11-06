@@ -874,16 +874,17 @@ static Z keydeg(Z key, P<Array> const& scale, Z cycleWidth, int degreesPerCycle)
 	Z cycles, cyckey;
 	sc_fdivmod(key, cycleWidth, cycles, cyckey);
 	
-	Z frac = scale->atz(0) + cycleWidth - cyckey;
-	Z mindiff = std::abs(frac);
-	int idegree = degreesPerCycle; // the root of the next cycle
-	for (int i = 0; i < degreesPerCycle; ++i) {
-		frac = std::abs(cyckey - scale->atz(i));
+	Z mindiff = std::abs(cyckey - scale->atz(0));
+	int idegree = 0;
+	for (int i = 1; i < degreesPerCycle; ++i) {
+		Z frac = std::abs(cyckey - scale->atz(i));
 		if (frac < mindiff) {
 			mindiff = frac;
 			idegree = i;
 		}
 	}
+	// the next cycle's root, checked last so ties go to the lower degree
+	if (std::abs(scale->atz(0) + cycleWidth - cyckey) < mindiff) idegree = degreesPerCycle;
 	
 	return idegree + cycles * degreesPerCycle;
 }

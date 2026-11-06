@@ -495,6 +495,7 @@ editable-scrollable-pane equals
 ;; upstream bugs: lfnoise/sapf#8 #14 #2
 ".25 .5 3 blip 1 N #[1] equals"
 "11 [0 3 6 9 12] keydeg 4 equals"
+"32 40 to [0 4 7 10 12] keydeg [10 11 11 11 12 12 12 13 13] equals"
 "0 .1 sinosc 2 1 apverb4 size 2 equals"
 
 ] aa pr cr
