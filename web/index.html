@@ -347,6 +347,9 @@ import { createEditor, lineAt, blockAt, paragraphAt, playsSound } from './build/
 // Code is evaluated on a wasm pthread and audio renders in a Wasm Audio Worklet; both share
 // memory, which needs cross-origin isolation (serve with web/serve.py).
 if (!crossOriginIsolated) print('This page needs cross-origin isolation (COOP/COEP headers). Serve it with web/serve.py.', 'err');
+// Safari (16.4+) plays Web Audio as 'ambient' sound by default, which the silent switch mutes; it was
+// also silent on a Bluetooth headset. 'playback' is how music apps play.
+if (navigator.audioSession) navigator.audioSession.type = 'playback';
 const sapfReady = createSapf({ print, printErr: s => print(s, 'err') });
 let sapf, ctx;
 
