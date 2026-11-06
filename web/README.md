@@ -236,7 +236,8 @@ The keys follow vs-sapf:
 | Shift+Enter | evaluate the selection or the outermost `( )` block around the cursor (else the line) |
 | Cmd/Ctrl+Shift+Enter | evaluate the selection or the paragraph (text between blank lines) |
 | Esc or Cmd/Ctrl+. | `stop` |
-| Cmd/Ctrl+Shift+. | `clear` (also clears the console) |
+| Cmd/Ctrl+Shift+. | `clear` (clears the stack) |
+| Cmd/Ctrl+K | clear the console (also the Clear button above it) |
 | Shift+Alt+F | format (vs-sapf uses Cmd/Ctrl+Shift+I, which opens the browser's devtools) |
 | Ctrl+Space (Mac: also Option+` or Option+I) | open completion, even with nothing typed |
 

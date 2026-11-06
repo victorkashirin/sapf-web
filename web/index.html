@@ -81,10 +81,12 @@
   #fileList .item, #soundList .item, .pop .none, .pop [data-example] { padding-left: 18px; } /* entries under a heading */
   .pop .hint { color: var(--dim); font-size: 11px; padding: 8px 8px 2px; border-top: 1px solid #ffffff0d; margin-top: 4px; }
   #fileLabel { color: var(--dim); letter-spacing: .1em; text-transform: none; }
+  #clearLog { float: right; margin-top: -2px; padding: 1px 8px; font-size: 10px; letter-spacing: .1em; color: var(--dim); }
   #stop { color: var(--red); }
 
   /* LED toggle */
-  .led { display: inline-flex; align-items: center; gap: 6px; color: var(--dim); font-size: 12px; cursor: pointer; user-select: none; }
+  .led { display: inline-flex; align-items: center; gap: 6px; color: var(--dim); font-size: 12px; cursor: pointer; user-select: none;
+    position: relative; top: 1px; /* center on the keycaps as they look, with their 2px bottom shadow */ }
   .led input {
     appearance: none; margin: 0; width: 9px; height: 9px; border-radius: 50%; cursor: pointer;
     background: #1d2a20; box-shadow: inset 0 1px 2px #000, 0 1px 0 #ffffff14;
@@ -197,7 +199,7 @@
   <section class="panel"><div class="tag">editor <span id="fileLabel"></span></div><div class="screen" id="code"></div></section>
   <div class="split" id="split" role="separator" tabindex="0" aria-label="Resize editor and console"
     aria-orientation="vertical" aria-valuemin="15" aria-valuemax="85" aria-valuenow="50"></div>
-  <section class="panel"><div class="tag">console</div><div id="controls"></div><pre class="screen" id="log"></pre></section>
+  <section class="panel"><div class="tag">console <button id="clearLog" title="Clear console (Mod+K)">Clear</button></div><div id="controls"></div><pre class="screen" id="log"></pre></section>
 </main>
 <script type="text/plain" id="example">(1 0 impulse .3 decay) (.2 2X white) *  (1/20 0 sinosc 1m .2 bilin) .2 2 combn play
 </script>
@@ -216,7 +218,8 @@ print(`; keys (Mod = Cmd/Ctrl)
 ;   Shift+Enter      eval ( ) block
 ;   Mod+Shift+Enter  eval paragraph
 ;   Esc, Mod+.       stop sound
-;   Mod+Shift+.      clear stack and console
+;   Mod+Shift+.      clear stack
+;   Mod+K            clear console
 ;   Shift+Alt+F      format
 ;   Ctrl+Space       complete (Mac: also Opt+\` or Opt+I)
 ; hover a word for docs. "Replace sound"
@@ -406,9 +409,9 @@ async function run(src) {
 // Evaluating code that plays stops the current sound first, when "Replace sound" is on.
 const replace = document.getElementById('replace');
 const evalCode = src => {
-  // Clearing the stack (Mod+Shift+.) clears the console and sliders too; a slider that runs again
+  // Clearing the stack (Mod+Shift+.) clears the sliders too; a slider that runs again
   // gets a fresh row, at the position sapf kept for its name.
-  if (src.trim() === 'clear') { log.replaceChildren(); controls.replaceChildren(); rows.length = 0; }
+  if (src.trim() === 'clear') { controls.replaceChildren(); rows.length = 0; }
   return run(replace.checked && playsSound(src) ? 'stop\n' + src : src);
 };
 // The editor's code and the split size persist in this browser. Storage can be blocked (private mode,
@@ -537,6 +540,14 @@ document.getElementById('run').onclick = () => {
   evalCode(lineAt(editor.state.doc.toString(), from, to).code);
 };
 document.getElementById('stop').onclick = () => run('stop');
+const clearLog = () => log.replaceChildren();
+document.getElementById('clearLog').onclick = clearLog;
+// Mod+K clears the console from anywhere on the page. Mod is Cmd on a Mac, where Ctrl+K stays the
+// editor's delete-to-line-end.
+const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
+document.addEventListener('keydown', e => {
+  if (e.code === 'KeyK' && (isMac ? e.metaKey : e.ctrlKey) && !e.shiftKey && !e.altKey) { e.preventDefault(); clearLog(); }
+});
 // Splitter: drag it, or focus it and use the arrow keys. Splits left/right, or top/bottom when stacked.
 const split = document.getElementById('split'), stacked = matchMedia('(max-width: 760px)');
 const [editorPanel, , consolePanel] = document.querySelector('main').children;
