@@ -54,6 +54,11 @@
   button:hover, .btn:hover { background: linear-gradient(#52565e, #383b41); }
   button:active, .btn:active { transform: translateY(2px); background: linear-gradient(#36393e, #303338); box-shadow: inset 0 1px 2px #0008, 0 0 0 #131518; }
   #run { color: var(--amber); }
+  .toggles { display: inline-flex; gap: 6px; } /* wrap together */
+  button.icon { padding: 4px 8px; line-height: 0; color: var(--dim); }
+  button.icon svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  button.icon[aria-pressed="true"] { color: var(--phosphor); }
+  button.icon[aria-pressed="true"] svg { filter: drop-shadow(0 0 3px #7ee78799); }
 
   /* File menu: a <details> dropdown */
   .menu { position: relative; }
@@ -127,6 +132,17 @@
       repeating-linear-gradient(0deg, #00000038 0 1px, transparent 1px 3px),
       radial-gradient(ellipse at center, #0e1611, #070a08 85%);
   }
+  /* right column: console over the scope */
+  .col { display: grid; grid-template-rows: minmax(0, 1fr); grid-auto-rows: auto; min-height: 0; }
+  [hidden] { display: none !important; } /* over .panel's and .split's display: flex */
+  .split.row { height: 14px; cursor: row-resize; }
+  .split.row::before { width: 32px; height: 7px; background: repeating-linear-gradient(#000b 0 1px, #ffffff18 1px 2px, transparent 2px 3px); }
+  .split.row:hover::before, .split.row.drag::before { background: repeating-linear-gradient(#000b 0 1px, #ffb45466 1px 2px, transparent 2px 3px); }
+  /* scope and spectrum panels side by side; --viz-h is their screens' height, set by the splitter */
+  .viz { display: flex; gap: 14px; min-width: 0; }
+  .viz > .panel { flex: 1; min-width: 0; }
+  .viz canvas { display: block; flex: none; cursor: move; touch-action: none; width: 100%; height: var(--viz-h, 140px);
+    background: repeating-linear-gradient(0deg, #00000038 0 1px, transparent 1px 3px), radial-gradient(ellipse at center, #0e1611, #070a08 85%); }
   #log .in { color: var(--amber); text-shadow: 0 0 5px #ffb45444; }
   #log .err { color: var(--red); text-shadow: 0 0 5px #ff7b7244; }
   #log .dim { color: #4f7d5a; text-shadow: none; }
@@ -160,6 +176,7 @@
     .split::before { width: 32px; height: 7px; background: repeating-linear-gradient(#000b 0 1px, #ffffff18 1px 2px, transparent 2px 3px); }
     .split:hover::before, .split.drag::before { background: repeating-linear-gradient(#000b 0 1px, #ffb45466 1px 2px, transparent 2px 3px); }
     header { padding: 10px 16px 2px; }
+    .viz canvas { height: var(--viz-h, 90px); }
   }
 </style>
 <header>
@@ -189,6 +206,8 @@
   </details>
   <button id="run">Run</button><button id="stop">Stop</button><button id="addSlider">Add control</button>
   <label class="led"><input type="checkbox" id="replace" checked> Replace sound</label>
+  <span class="toggles"><button id="showScope" class="icon" aria-pressed="true" title="Show or hide the scope" aria-label="Scope"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1 8Q3.5 1 6 8T11 8T16 8"/></svg></button>
+  <button id="showFall" class="icon" aria-pressed="true" title="Show or hide the spectrum" aria-label="Spectrum"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 14V9M5.5 14V4M8.5 14V7M11.5 14V2M14.5 14V10"/></svg></button></span>
   <button id="about" class="round" title="About" aria-label="About">?</button>
   <a class="gh" href="https://github.com/victorkashirin/sapf-web"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a>
 </header>
@@ -219,7 +238,14 @@
   <section class="panel"><div class="tag">editor <span id="fileLabel"></span></div><div class="screen" id="code"></div></section>
   <div class="split" id="split" role="separator" tabindex="0" aria-label="Resize editor and console"
     aria-orientation="vertical" aria-valuemin="15" aria-valuemax="85" aria-valuenow="50"></div>
+  <div class="col">
   <section class="panel"><div class="tag">console <button id="clearLog" title="Clear console (Mod+K)">Clear</button></div><div id="controls"></div><pre class="screen" id="log"></pre></section>
+  <div class="split row" id="scopeSplit" role="separator" tabindex="0" aria-label="Resize console and scope panels" aria-orientation="horizontal"></div>
+  <div class="viz">
+    <section class="panel"><div class="tag">scope</div><canvas class="screen" id="scope" role="img" aria-label="Oscilloscope of the output" title="Drag sideways for the time shown, up or down for the gain"></canvas></section>
+    <section class="panel"><div class="tag">spectrum</div><canvas class="screen" id="fall" role="img" aria-label="Spectrogram of the output" title="Drag sideways for the time shown, up or down for the brightness"></canvas></section>
+  </div>
+  </div>
 </main>
 <script type="text/plain" id="example">(1 0 impulse .3 decay) (.2 2X white) *  (1/20 0 sinosc 1m .2 bilin) .2 2 combn play
 </script>
@@ -426,6 +452,154 @@ async function boot() {
   // An absolute path: the working directory is /sounds.
   ctx = sapf.emscriptenGetAudioObject(sapf.ccall('sapf_start_audio', 'number', ['string'], ['/sapf-prelude.txt']));
   window.sapf = sapf; window.sapfCtx = ctx; // for debugging in devtools
+  // The worklet node appears once its thread starts; tap it then. The analysers' default
+  // channelCountMode 'max' downmixes stereo to mono, (L+R)/2. The waveform gets its own, with the
+  // longest buffer, so it can show up to SPAN[0][1] ms; the spectrum keeps a 4096-point FFT.
+  const tap = () => {
+    const h = sapf._sapf_audio_node();
+    if (!h) return setTimeout(tap, 50);
+    analyser = new AnalyserNode(ctx, { fftSize: 4096, smoothingTimeConstant: .5, minDecibels: -100, maxDecibels: -10 });
+    waveAn = new AnalyserNode(ctx, { fftSize: 32768 });
+    const node = sapf.emscriptenGetAudioObject(h);
+    node.connect(analyser); node.connect(waveAn);
+    KEYS.forEach(([sk, lk], i) => {
+      if (+store.get(sk)) spans[i] = clampTo(SPAN[i], +store.get(sk));
+      const l = parseFloat(store.get(lk)); // a level can be 0 or negative, so not `||`
+      if (isFinite(l)) levels[i] = clampTo(LEVEL[i], l);
+    });
+    requestAnimationFrame(drawViz);
+  };
+  tap();
+}
+
+// Scope (a waveform, triggered on a rising zero crossing so periodic sounds stand still) and
+// spectrum (a waterfall: columns scrolling left, log frequency from 20 Hz at the bottom to Nyquist
+// at the top, -100 to -10 dB as colour), each on its own canvas.
+const scope = document.getElementById('scope'), sg = scope.getContext('2d');
+const fall = document.getElementById('fall'), fg = fall.getContext('2d');
+// The waterfall's history, kept off screen so resizing the visible canvas does not clear it.
+// 0x0 at first, so the first frame sets col and rowMax.
+let wf = Object.assign(document.createElement('canvas'), { width: 0, height: 0 }), wg = wf.getContext('2d');
+// black -> indigo -> teal -> phosphor -> amber -> red -> white (the page's own accents), 256 steps
+const stops = [[0, 7, 10, 8], [.2, 30, 36, 92], [.4, 24, 128, 140], [.58, 126, 231, 135], [.74, 255, 180, 84], [.88, 255, 123, 114], [1, 255, 240, 230]];
+const lut = new Uint8ClampedArray(256 * 3);
+for (let i = 0; i < 256; i++) {
+  const v = i / 255, k = stops.findIndex(s => s[0] >= v), [a, b] = [stops[Math.max(0, k - 1)], stops[k]];
+  const f = b[0] > a[0] ? (v - a[0]) / (b[0] - a[0]) : 0;
+  for (let c = 1; c < 4; c++) lut[i * 3 + c - 1] = a[c] + f * (b[c] - a[c]);
+}
+let analyser, waveAn, wave, spec, col, rowMax, last, acc = 0;
+// Dragging over a panel sets, sideways, the time it shows (right = longer, doubling per 80px):
+// the waveform's width in ms, the waterfall's history in seconds; and up or down its level
+// (up = more): the waveform's gain, doubling per 80px, and the waterfall's boost in dB, 12 per
+// 80px, which lifts quiet partials into the colours (and pushes loud ones to white).
+// All kept in the browser; they load when audio starts, as `store` comes later.
+const SPAN = [[1, 300], [1, 60]], LEVEL = [[1 / 8, 64], [-30, 60]];
+const spans = [20, 10], levels = [1, 0], KEYS = [['scopeMs', 'scopeGain'], ['fallSec', 'fallDb']];
+let hint = { side: 0, until: 0 }; // which panel shows its settings, and until when
+const clampTo = ([lo, hi], v) => Math.max(lo, Math.min(hi, v));
+[scope, fall].forEach((c, side) => {
+  c.onpointerdown = e => {
+    const x0 = e.clientX, y0 = e.clientY, s0 = spans[side], l0 = levels[side];
+    c.setPointerCapture(e.pointerId);
+    hint = { side, until: Infinity };
+    c.onpointermove = e => {
+      const v = clampTo(SPAN[side], s0 * 2 ** ((e.clientX - x0) / 80)), up = (y0 - e.clientY) / 80;
+      spans[side] = +v.toPrecision(v < 10 ? 2 : 3);
+      levels[side] = side ? Math.round(clampTo(LEVEL[1], l0 + up * 12)) : +clampTo(LEVEL[0], l0 * 2 ** up).toPrecision(2);
+      KEYS[side].forEach((k, i) => store.set(k, [spans, levels][i][side]));
+    };
+  };
+  c.onlostpointercapture = () => { c.onpointermove = null; hint.until = performance.now() + 800; };
+});
+// Sizes a canvas's pixels to its box; false when it has no room (hidden or collapsed).
+function fit(c) {
+  const W = c.clientWidth * devicePixelRatio | 0, H = c.clientHeight * devicePixelRatio | 0;
+  if (W < 8 || H < 8) return false;
+  if (c.width !== W || c.height !== H) { c.width = W; c.height = H; }
+  return true;
+}
+function drawSpan(g, side, now) {
+  if (hint.side !== side || now >= hint.until) return;
+  const pad = 8 * devicePixelRatio;
+  g.font = `${11 * devicePixelRatio}px ${getComputedStyle(scope).fontFamily}`;
+  g.fillStyle = '#ffb454'; g.textAlign = 'right'; g.textBaseline = 'top'; g.shadowColor = '#000'; g.shadowBlur = 3 * devicePixelRatio;
+  const level = side ? `${levels[1] > 0 ? '+' : ''}${levels[1]} dB` : `×${levels[0]}`;
+  g.fillText(side ? `${spans[1]} s  ${level}` : `${spans[0]} ms  ${level}`, g.canvas.width - pad, pad);
+  g.shadowBlur = 0;
+}
+function drawViz(now) {
+  requestAnimationFrame(drawViz);
+  const dt = Math.min(250, now - (last ?? now)); last = now; // capped: a hidden tab's stall adds no burst of columns
+  if (fit(scope)) drawWave(now);
+  if (fit(fall)) drawFall(now, dt);
+}
+// The newest `span` samples that start on a rising zero crossing (searching back), drawn as each
+// pixel column's min and max so long spans keep their peaks.
+function drawWave(now) {
+  const W = scope.width, H = scope.height, n = waveAn.fftSize, pad = 4 * devicePixelRatio | 0, sw = W - 2 * pad;
+  wave ??= new Float32Array(n);
+  waveAn.getFloatTimeDomainData(wave);
+  sg.clearRect(0, 0, W, H);
+  const span = Math.min(n >> 1, Math.round(spans[0] / 1000 * ctx.sampleRate));
+  let t = n - span;
+  for (let i = n - span; i > 0; i--) if (wave[i - 1] <= 0 && wave[i] > 0) { t = i; break; }
+  const gain = levels[0], yOf = v => H / 2 - Math.max(-1, Math.min(1, v * gain)) * (H / 2 - pad);
+  sg.beginPath();
+  if (span <= sw) for (let i = 0; i < span; i++) { // short spans: a line through the samples
+    const x = pad + i / (span - 1) * sw, y = yOf(wave[t + i]);
+    i ? sg.lineTo(x, y) : sg.moveTo(x, y);
+  }
+  else for (let x = 0; x < sw; x++) {
+    const i0 = t + Math.floor(x / sw * span), i1 = Math.max(i0 + 1, t + Math.floor((x + 1) / sw * span));
+    let mn = wave[i0], mx = mn;
+    for (let i = i0 + 1; i < i1; i++) { const v = wave[i]; if (v < mn) mn = v; else if (v > mx) mx = v; }
+    x ? sg.lineTo(pad + x, yOf(mx)) : sg.moveTo(pad, yOf(mx));
+    if (mn !== mx) sg.lineTo(pad + x, yOf(mn));
+  }
+  // glow: a wide faint halo, then the bright core with a small blur; the path is built once
+  sg.lineJoin = 'round'; sg.strokeStyle = '#7ee787';
+  sg.lineWidth = 6 * devicePixelRatio; sg.globalAlpha = .12; sg.stroke();
+  sg.lineWidth = 1.5 * devicePixelRatio; sg.globalAlpha = 1; sg.shadowColor = '#7ee787'; sg.shadowBlur = 8 * devicePixelRatio; sg.stroke();
+  sg.shadowBlur = 0;
+  drawSpan(sg, 0, now);
+}
+// Each frame folds the spectrum into rowMax (the loudest bin per pixel row, the loudest frame
+// since the last column), and w / spans[1] columns a second scroll in at the right.
+function drawFall(now, dt) {
+  const w = fall.width, h = fall.height;
+  if (wf.width !== w || wf.height !== h) { // a new canvas, as resizing one clears it
+    const old = wf;
+    wf = document.createElement('canvas'); wf.width = w; wf.height = h; wg = wf.getContext('2d');
+    // keep the history: right-aligned so time keeps its scale, stretched to the new height as frequency spans it
+    if (old.width && old.height) wg.drawImage(old, w - old.width, 0, old.width, h); // drawImage throws on a 0x0 canvas
+    col = wg.createImageData(1, h); rowMax = new Float32Array(h).fill(-Infinity);
+  }
+  spec ??= new Float32Array(analyser.frequencyBinCount);
+  analyser.getFloatFrequencyData(spec);
+  const nyq = ctx.sampleRate / 2, lo = Math.log(20), hi = Math.log(nyq), bins = spec.length, { minDecibels: dbLo, maxDecibels: dbHi } = analyser;
+  let prev = 1;
+  for (let y = 0; y < h; y++) {
+    const b = Math.min(bins, Math.ceil(Math.exp(lo + (y + 1) / h * (hi - lo)) / nyq * bins));
+    for (let i = Math.min(prev, b - 1); i < b; i++) if (spec[i] > rowMax[y]) rowMax[y] = spec[i];
+    prev = b;
+  }
+  acc += dt / 1000 * w / spans[1];
+  const k = Math.min(w, Math.floor(acc));
+  if (k > 0) {
+    acc -= k;
+    for (let y = 0; y < h; y++) {
+      const v = Math.round(Math.max(0, Math.min(1, (rowMax[y] + levels[1] - dbLo) / (dbHi - dbLo))) * 255) * 3, o = (h - 1 - y) * 4;
+      col.data[o] = lut[v]; col.data[o + 1] = lut[v + 1]; col.data[o + 2] = lut[v + 2]; col.data[o + 3] = 255;
+    }
+    rowMax.fill(-Infinity);
+    wg.drawImage(wf, -k, 0);
+    wg.putImageData(col, w - 1, 0);
+    if (k > 1) wg.drawImage(wf, w - 1, 0, 1, h, w - k, 0, k - 1, h); // short spans: one reading fills k columns
+  }
+  fg.clearRect(0, 0, w, h);
+  fg.drawImage(wf, 0, 0);
+  drawSpan(fg, 1, now);
 }
 
 
@@ -611,6 +785,49 @@ split.onpointerdown = e => {
   };
 };
 split.onlostpointercapture = () => { split.onpointermove = null; split.classList.remove('drag'); };
+// The console/viz splitter sets the scope and spectrum screens' height (--viz-h on the column);
+// the console takes the rest.
+const scopeSplit = document.getElementById('scopeSplit'), vizCol = scopeSplit.parentNode, viz = scope.closest('.viz');
+const vizPanels = { showScope: scope.closest('.panel'), showFall: fall.closest('.panel') };
+const shownPanel = () => Object.values(vizPanels).find(p => !p.hidden);
+const setScopeH = px => {
+  const panel = shownPanel();
+  if (!panel) return;
+  const chrome = panel.offsetHeight - panel.querySelector('canvas').offsetHeight; // the panel's tag and padding
+  const max = vizCol.clientHeight - scopeSplit.offsetHeight - chrome - 100; // leave the console 100px
+  px = Math.round(Math.max(40, Math.min(max, px)));
+  vizCol.style.setProperty('--viz-h', px + 'px');
+  scopeSplit.setAttribute('aria-valuenow', px);
+};
+const vizH = () => shownPanel()?.querySelector('canvas').offsetHeight;
+// Saved only when the user sets it, so a small window clamps the height without losing the choice.
+const saveScopeH = () => vizH() && store.set('scopeH', vizH());
+const loadScopeH = () => +store.get('scopeH') && setScopeH(+store.get('scopeH'));
+// Header buttons show or hide each panel; with both hidden the console takes the whole column.
+const setViz = (id, on) => {
+  vizPanels[id].hidden = !on;
+  document.getElementById(id).setAttribute('aria-pressed', on);
+  viz.hidden = scopeSplit.hidden = !shownPanel();
+  store.set(id, on ? 1 : 0);
+  loadScopeH(); // the clamp depends on the shown panel
+};
+for (const id in vizPanels) {
+  setViz(id, store.get(id) !== '0');
+  document.getElementById(id).onclick = () => setViz(id, vizPanels[id].hidden);
+}
+new ResizeObserver(loadScopeH).observe(vizCol); // the window or the other splitter resizing the column
+scopeSplit.onpointerdown = e => {
+  e.preventDefault();
+  scopeSplit.setPointerCapture(e.pointerId);
+  scopeSplit.classList.add('drag');
+  const panel = shownPanel(), chrome = panel.offsetHeight - panel.querySelector('canvas').offsetHeight;
+  scopeSplit.onpointermove = e => setScopeH(panel.getBoundingClientRect().bottom - e.clientY - scopeSplit.offsetHeight / 2 - chrome);
+};
+scopeSplit.onlostpointercapture = () => { scopeSplit.onpointermove = null; scopeSplit.classList.remove('drag'); saveScopeH(); };
+scopeSplit.onkeydown = e => {
+  const d = { ArrowUp: 20, ArrowDown: -20 }[e.key];
+  if (d) { e.preventDefault(); setScopeH(vizH() + d); saveScopeH(); }
+};
 split.onkeydown = e => {
   const d = { ArrowLeft: -.05, ArrowUp: -.05, ArrowRight: .05, ArrowDown: .05 }[e.key];
   if (d) { e.preventDefault(); setShare(share + d); }
