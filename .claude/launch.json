@@ -4,8 +4,46 @@
     {
       "name": "sapf-web",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["web/serve.py", "8765"],
+      "runtimeArgs": [
+        "web/serve.py",
+        "8765"
+      ],
       "port": 8765
+    },
+    {
+      "name": "sapf-web-editor",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "web/serve.py",
+        "8766"
+      ],
+      "port": 8766
+    },
+    {
+      "name": "sapf-web-ui",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "web/serve.py",
+        "8771"
+      ],
+      "port": 8771
+    },
+    {
+      "name": "sapf-web-files",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "web/serve.py",
+        "8772"
+      ],
+      "port": 8772
+    },
+    {
+      "name": "sapf-web-sounds",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "web/serve.py"
+      ],
+      "port": 8773
     }
   ]
 }

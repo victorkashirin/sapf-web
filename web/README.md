@@ -19,7 +19,7 @@ file first (`"x.wav" sf> head = b  \[b 0 pan2] .25 1 2 ola play`).
 What works:
 
 - All of `src/` compiles with `em++` (Emscripten 5.0.7) and links into `sapf.wasm`
-  (3.7 MB, 920 KB gzipped). It uses the same libraries as the native portable build: fftw 3.3.10,
+  (3.0 MB, 840 KB gzipped). It uses the same libraries as the native portable build: fftw 3.3.10,
   libsndfile 1.2.2 and libjpeg, all compiled to wasm. fftw accounts for most of the size
   (it was 2.6 MB with the earlier hand-written FFT).
 - The threading model matches the native app:
@@ -95,7 +95,7 @@ What works:
     - the slider example adds `freq` and `amp` sliders; after dragging them, the output pitch
       (766 Hz) matched the `freq` slider (767.3)
   - `node web/build/test_sapf.js`: sapf's C++ doctest suite (`test/*.cpp`) passes on wasm:
-    29 of 29 test cases, 9,974,926 assertions, in about 7 seconds. It covers math ops,
+    29 of 29 test cases, 9,974,926 assertions, in under a second. It covers math ops,
     oscillator UGens, stream ops, MIDI packets, sound files (libsndfile, resampling),
     the async file writer thread, and spectrogram images. A failing test makes the process
     exit with a non-zero code (checked with a deliberately failing test).
@@ -153,6 +153,24 @@ main thread (index.html)        eval thread (pthread)          audio thread (Was
                                  `go` starts more pthreads           └─> each open stream: rtPlayerBackendCallback
                                                                           └─> fillBufferList ──> ZIn::fill (lazy graph)
 ```
+
+Two build choices matter for speed:
+
+- **Signal blocks are 128 frames, not sapf's default 512** (`sapf_init`). The worklet asks for 128
+  frames per callback. With 512-frame blocks, one callback in four computed all the audio, so a
+  patch could drop out at under 20% average CPU (one run of a 48-voice patch averaged 18% and its
+  slowest callback took 116%). With 128-frame blocks the average cost is about 30% higher, but
+  the slowest callback costs about a third as much, so about 2.5 times as many voices fit before
+  audio breaks up. Measured on a 48-voice `dust`/`apverb6` patch, as a share of the 2.67 ms one
+  callback may take: mean 14%, slowest 1% of callbacks 58% before; 19% and 21% after. The 45
+  examples in `sapf-examples.txt` whose output is the same on every run give the same audio with
+  either block size. One difference from the desktop: `kr` and `krc` accept only factors that
+  divide 128, so `256 kr` and `512 kr` are errors ("out of range").
+- **C++ exceptions are native wasm exceptions** (`-fwasm-exceptions`). With `-fexceptions`,
+  Emscripten emulates them through JavaScript: every call that can throw, inside a function with a
+  `P<>` local, went from wasm to JavaScript and back. That made evaluation about 4 times slower
+  (`ord 3000000 N +/`: 3.2 s before, 0.8 s after), made audio rendering about 20% slower, and
+  added 0.7 MB to `sapf.wasm`.
 
 | File | Purpose |
 |---|---|

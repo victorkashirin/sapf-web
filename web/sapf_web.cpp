@@ -138,7 +138,11 @@ EMSCRIPTEN_KEEPALIVE void sapf_set_mouse(float x, float y)
 EMSCRIPTEN_KEEPALIVE void sapf_init(double sampleRate, const char* preludeFile)
 {
 	setlocale(LC_NUMERIC, "C");
-	vm.setSampleRate(sampleRate);
+	// The audio worklet pulls 128 frames per callback. With sapf's default 512-frame signal blocks, one
+	// callback in four computes all the audio and the others nearly nothing, so audio drops out at
+	// under 20% average CPU. Cost: `kr`/`krc` factors must divide 128. kr as in VM::setSampleRate.
+	vm.ar = Rate(sampleRate, 128);
+	vm.kr = Rate(vm.ar, kDefaultControlBlockSize);
 	AddCoreOps();
 	AddMathOps();
 	AddStreamOps();

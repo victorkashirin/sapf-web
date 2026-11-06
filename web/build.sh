@@ -16,7 +16,8 @@ DEPS="${DEPS:-$PWD/web/deps}"
 OUT=web/build${SANITIZE:+-$SANITIZE}; rm -rf $OUT/obj; mkdir -p $OUT/obj
 SAN="${SANITIZE:+-fsanitize=$SANITIZE -g}"
 
-FLAGS="-std=c++17 -O2 -msimd128 -fexceptions -pthread -sUSE_LIBJPEG=1 -D_USE_MATH_DEFINES -DSAMPLE_IS_DOUBLE=1 -DUSE_LIBEDIT=0
+# Native wasm exceptions: -fexceptions emulates them through JS calls, which made evaluation ~4x slower.
+FLAGS="-std=c++17 -O2 -msimd128 -fwasm-exceptions -pthread -sUSE_LIBJPEG=1 -D_USE_MATH_DEFINES -DSAMPLE_IS_DOUBLE=1 -DUSE_LIBEDIT=0
   -Iweb/shim -Iinclude -Ithird_party/r8brain/src -I$DEPS/prefix/include -I$DEPS/xsimd-13.2.0/include -I$DEPS/eigen-3.4.0 $SAN"
 
 SRCS="$(grep -oE "'src/[A-Za-z_]+\.cpp'" meson.build | tr -d "'" | sort -u | grep -v main.cpp) web/sapf_web.cpp third_party/r8brain/src/r8bbase.cpp"
@@ -33,7 +34,7 @@ for f in $SRCS; do OBJS="$OBJS $OUT/obj/$(basename $f .cpp).o"; done
 OBJS="$OBJS $DEPS/prefix/lib/libsndfile.a $DEPS/prefix/lib/libfftw3.a"
 
 # Thread stacks: Emscripten's default is 64 KB; sapf's evaluator recurses deeply (native threads get 512 KB+).
-BASE="-O2 -fexceptions -pthread -sUSE_LIBJPEG=1 -sALLOW_MEMORY_GROWTH -sINITIAL_MEMORY=256MB
+BASE="-O2 -fwasm-exceptions -pthread -sUSE_LIBJPEG=1 -sALLOW_MEMORY_GROWTH -sINITIAL_MEMORY=256MB
   -sSTACK_SIZE=4MB -sDEFAULT_PTHREAD_STACK_SIZE=2MB -sPTHREAD_POOL_SIZE=4 $SAN"
 # Sanitizers make Emscripten default to EXIT_RUNTIME, which shuts a main-less module down right
 # after start-up (killing the evaluation thread). Keep it running; test_sapf.js still checks leaks at exit.
