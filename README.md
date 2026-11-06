@@ -1,190 +1,100 @@
-# sapf, cross-platform edition
+# sapf-web
 
-this is a fork of James McCartney's [sapf](https://github.com/lfnoise/sapf) (Sound As Pure Form) which aims to implement cross-platform alternatives for the various macOS libraries used in the original codebase. it runs on (at least!) Linux, macOS and Windows.
+sapf (Sound As Pure Form) running in the browser. James McCartney's [sapf](https://github.com/lfnoise/sapf)
+is compiled to WebAssembly with Emscripten and plays through Web Audio, with a code editor, console,
+scope and spectrum panels around it. It builds on the cross-platform fork,
+[ahihi/sapf](https://github.com/ahihi/sapf).
 
-[original README](README.txt)
+The engine is sapf's own C++ source, mostly unchanged. The web code lives in [`web/`](web/):
+shims for RtAudio, RtMidi and readline, a web entry point, the page and the build scripts.
+[web/README.md](web/README.md) describes how it works, what differs from the desktop app, and
+the bugs found along the way.
 
-## building
+## Using it
 
-### building with Nix
+Put the cursor on a line and press Cmd/Ctrl+Enter, for example on `440 0 sinosc .3 * play`.
+Esc stops the sound. `helpall` lists every built-in; hovering a word shows its docs.
 
-> [!NOTE]
-> the Nix build works on NixOS and macOS. on other Linux distros, [problems](https://github.com/ahihi/sapf/issues/38) have been reported, so you may want to build manually instead.
+| Key | Evaluates |
+|---|---|
+| Cmd/Ctrl+Enter | the selection or the current line |
+| Shift+Enter | the outermost `( )` block around the cursor |
+| Cmd/Ctrl+Shift+Enter | the paragraph (text between blank lines) |
+| Esc or Cmd/Ctrl+. | `stop` |
 
-if using flakes, you can add sapf to your inputs as follows:
+On touch screens, the Line, Block and Para buttons on the editor's title strip do the same.
 
-```nix
-inputs.sapf.url = "git+https://github.com/ahihi/sapf?submodules=1";
-inputs.sapf.inputs.nixpkgs.follows = "nixpkgs-unstable"; # optional
+Web-only features:
+
+- **Sounds menu.** Upload sound files and use them as `"name.wav" sf>`. Uploads survive a reload.
+- **Sliders.** `"freq" 100 2000 440 xslider` adds a slider under the editor and returns its signal.
+- **Files.** The File menu saves named texts in the browser and opens the example files.
+- **My prelude.** A saved file that loads after the built-in prelude on every start; the `prelude` word opens it.
+- **Downloads.** Recordings, `>sf` output and `sgram` images download instead of opening.
+
+## Building
+
+You need Node.js, CMake, [emsdk](https://emscripten.org/docs/getting_started/downloads.html)
+(activated, e.g. `source ~/emsdk/emsdk_env.sh`) and the r8brain submodule:
+
+```bash
+git submodule update --init
 ```
 
-the sapf flake provides
+Build the wasm dependencies (fftw, libsndfile and headers) once, into `web/deps`:
 
-- a package `sapf.packages.default`
-- the nixpkgs overlay `sapf.overlays.default`, which contains the package `sapf`
-
-otherwise, you can clone this repo and run
-
-```shell
-nix build .?submodules=1
+```bash
+web/build-deps.sh
 ```
 
-in the top level directory.
+Build sapf and the editor:
 
-### building manually
-
-if not using Nix, you will need to install dependencies manually, e.g. via a package manager. the mandatory dependencies for a portable build are currently:
-
-- libedit
-- libsndfile
-- fftw
-- rtaudio
-- rtmidi
-- libxsimd
-- libjpeg-turbo
-
-for installing dependencies, you can refer to the CI scripts in this repo:
-
-- [install-debian-deps.sh](.github/scripts/install-debian-deps.sh) (Debian, Ubuntu, Mint, etc.)
-- [install-macos-native-deps.sh](.github/scripts/install-macos-native-deps.sh) (macOS with Homebrew, for builds using native macOS libraries)
-- [install-macos-cross-platform-deps.sh](.github/scripts/install-macos-cross-platform-deps.sh) (macOS with Homebrew, for builds using cross platform libraries)
-
-Ensure submodules are initialized if you didn't clone with `--recursive`:
-```shell
-git submodule init
-git submodule update
+```bash
+web/build.sh
 ```
 
-then, you can build by running:
+Serve the page. The dev server sends the cross-origin isolation headers that wasm threads
+need, so plain `python3 -m http.server` will not work:
 
-```shell
-meson setup --buildtype release build
-meson compile -C build
+```bash
+python3 web/serve.py 8765
 ```
 
-and you should get a binary at `./build/sapf`. This will be optimized for your
-native architecture and has the maximum level of optimization. This is recommended for
-normal usage. 
+Then open http://localhost:8765.
 
-To build an
-unoptimized binary, simply omit the `--buildtype release` param (which will default to
-`--buildtype debug`). If you've already ran `setup` and want to change the buildtype to `debug`, you can run
-```shell
-meson configure --buildtype debug build
-meson compile -C build
-```
-Note you can view the current buildtype setting via `meson configure build`.
+## Testing
 
-You can specify different targets defined in the meson.build file such as `meson compile sapf_x86_64_v3 -C build`.
-
-### building with Docker
-
-see Pavel Sutyrin's [Instructions fror Linux-based build in Docker](https://github.com/sutyrin/sapf?tab=readme-ov-file#build-in-docker).
-
-## running tests
-Tests are written using doctest (which is obtained via a wrap) and located in the `tests` folder.
-See [the doctest documentation](https://github.com/doctest/doctest/tree/master?tab=readme-ov-file#documentation) for more details.
-
-You can use meson test to run the tests.
-
-This will respect the `--buildtype` setting. For optimal debugging experience,
-you should use the `debug` buildtype. You can check the current buildtype with
-`meson configure build`. To change it, you can run `meson configure --buildtype debug build`.
-
-The below will run the tests
-```shell
-meson test --verbose -C build
-```
-Without `--verbose` you won't get the doctest test report (not to be confused with meson's
-own, less useful test report) printed to stdout and instead would have to view the test
-log file.
-
-Note there is currently a feature request for doctest for better integration 
-with meson but it is not yet implemented ATTOW: https://github.com/doctest/doctest/issues/531
-This seems to be why the default meson test report isn't that useful.
-
-## Sanitizers
-
-You can build and run tests / the program itself with [Google Sanitizers](https://github.com/google/sanitizers) enabled
-via meson option:
-```shell
-# on a new setup
-meson setup build -Dasan=true
-
-#on an existing setup
-meson configure -Dasan=true build
+```bash
+node web/smoke.mjs
 ```
 
-See `meson.options` for the available sanitizers. Note that only asan/ubsan will work on windows on
-the msys2/clang64 environment (other msys2 environments don't support any sanitizers).
+```bash
+node web/sapf-text.test.mjs
+```
 
-## Windows Usage Caveats
+```bash
+node web/build/test_sapf.js
+```
 
-Windows support is currently WIP. The following current "quirks" apply:
+`smoke.mjs` runs sapf's 369 language tests from `unit-tests.txt` plus playback, threads and
+sound-file checks on a Node build. `test_sapf.js` is sapf's C++ test suite.
 
-- It will default to WASAPI and use your primary output device. Ability to select different devices or audio drivers (ASIO, etc..) is not yet supported.
-- When pasting in multiline strings, they should work. Just note that many built-in Windows terminals by default will strip out certain characters like tabs,
-    ruining your beautiful formatting. This can be changed in the terminal's settings.
+## Deploying
 
-## Windows Build + Development
+Publishing a GitHub Release runs [`.github/workflows/web.yml`](.github/workflows/web.yml): it builds,
+tests, deploys the page to a Cloudflare Worker and attaches `sapf-web.zip` to the release.
+Prereleases get the zip but do not replace the live site. The repository needs the secrets
+`CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
 
-Windows support is achieved by building via [msys2](https://www.msys2.org/) (using mingw-w64-clang-x86_64) 
-as opposed to building natively on Windows (probably possible but probably much more annoying).
-We specifically use the clang version of msys2 for [compatibility with Google Analyzers](https://github.com/msys2/MINGW-packages/issues/3163#issuecomment-2451639935)
-which are recommended for writing more robust C++ code.
-Note that only asan/ubsan will work on windows on
-this environment (other msys2 environments don't even support any sanitizers).
+## Desktop build
 
-If you're for some reason not on x86_64 or you don't want to use the clang-based toolchain, 
-you'll have to replace any of the below references to that architecture with your own! 
-You can find and view info on packages on [msys2 packages](https://packages.msys2.org/queue) to see if the package exists for your architecture / toolchain. 
+The native sources and meson build from upstream are still here. For desktop build
+instructions, see [ahihi/sapf](https://github.com/ahihi/sapf). The original sapf documentation
+is in [README.txt](README.txt).
 
-1. Install [msys2](https://www.msys2.org/). Make sure to keep track of where you installed it as this will be where your
-"root directory" is for your msys2 / mingw64 shells. For this guide we will assume the default of `C:\msys64`
-2. If you haven't yet, clone or copy this repo somewhere inside the msys2 install. For example within the msys2 shell you could install git via
-`pacman -S git` and then git clone this repo into your "home" folder.
-3. From here on out, always use the clang64 shell (clang64.exe in your msys2 folder).
-4. Open your clang64 shell and install some needed development dependencies.
-    (Note the ca-certificates are required in order to download the gtest wrap, and in general you'll
-    have a bad time doing anything on msys2 without these certs.)
-   ```shell
-   # press ENTER when prompted to choose "all"
-   pacman -S --needed base-devel \
-    mingw-w64-clang-x86_64-toolchain
-   pacman -S \
-    mingw-w64-clang-x86_64-meson \
-    mingw-w64-clang-x86_64-fftw \
-    mingw-w64-clang-x86_64-libsndfile \
-    mingw-w64-clang-x86_64-pkgconf \
-    mingw-w64-clang-x86_64-rtaudio \
-    mingw-w64-clang-x86_64-rtmidi \
-    mingw-w64-clang-x86_64-readline \
-    mingw-w64-clang-x86_64-xsimd \
-    mingw-w64-clang-x86_64-libjpeg-turbo \
-    mingw-w64-clang-x86_64-ca-certificates
-   ```
-5. Close and reopen the shell to ensure it loads everything you just installed. 
-6. Now we can try to build in the clang64 shell.
-Navigate to the root directory of this repo.
-7. ```shell
-    # remove --buildtype release to build an unoptimized exe with debug symbols
-    meson setup --buildtype release build 
-    meson compile -C build
-    ```
-8. You should see `sapf.exe` is created under the `${workspaceFolder}/build` directory.
-9. You need all the required DLLs in order to run it via Windows. Go to your clang64 folder `C:\msys64\clang64\bin`
-and copy all of the dlls that look like `lib*.dll` (i.e. libreadline8.dll, libogg-0.dll, etc...). This is
-more than needed but I'm not sure the exact subset of dlls needed yet.
-10. Now you can run the exe directly by clicking or via your preferred command prompt.
-11. Test if its all working with a simple command (you should hear audio out of your primary output device)
-`15 .0 sinosc 200 * 300 + .0 sinosc .1 * play`
+## Licence
 
-When setting up your IDE, make sure it's using the clang64 libraries (C:\msys64\clang64\include)
-and binaries (C:\msys64\clang64\bin) for compilation / linking and NOT your native windows libraries / binaries.
+GPL-3.0, like sapf (see [COPYING](COPYING)). The deployed page links to the exact commit it was
+built from.
 
-See README_VSCODE.md for vscode-specific setup.
-
-# Acknowledgements
-
-Sample rate converter designed by Aleksey Vaneev of Voxengo.
-This is on non-OSX systems or when the AudioToolbox library is not available.
+Sample rate converter by Aleksey Vaneev of Voxengo (r8brain).
