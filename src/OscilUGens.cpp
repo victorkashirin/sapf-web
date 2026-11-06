@@ -1453,9 +1453,14 @@ struct Blip : public TwoInputUGen<Blip>
 			Z Na2 = 2. * Na + 1.;
 			Z Nb2 = Na2 + 2.;
 
-			Z d = 1. / sin(phase);
-			Z a = Na_scale * (sin(Na2 * phase) * d - 1.);
-			Z b = Nb_scale * (sin(Nb2 * phase) * d - 1.);
+			Z s = sin(phase);
+			// sin(k*phase)/sin(phase) -> k (k odd) as sin(phase) -> 0, which makes a and b exactly 1
+			Z a = 1., b = 1.;
+			if (std::abs(s) > 1e-12) {
+				Z d = 1. / s;
+				a = Na_scale * (sin(Na2 * phase) * d - 1.);
+				b = Nb_scale * (sin(Nb2 * phase) * d - 1.);
+			}
 
 			frac = sc_scurve0(frac); // this eliminates out a broadband tick in the spectrum.
 

@@ -876,7 +876,7 @@ static Z keydeg(Z key, P<Array> const& scale, Z cycleWidth, int degreesPerCycle)
 	
 	Z frac = scale->atz(0) + cycleWidth - cyckey;
 	Z mindiff = std::abs(frac);
-	int idegree = 0;
+	int idegree = degreesPerCycle; // the root of the next cycle
 	for (int i = 0; i < degreesPerCycle; ++i) {
 		frac = std::abs(cyckey - scale->atz(i));
 		if (frac < mindiff) {
@@ -7691,7 +7691,7 @@ void AddStreamOps()
    
 	vm.addBifHelp("\n*** list ordering operations ***");
 	DEF(cyc, 1, 1, "(list --> list) makes a finite list become cyclic.")
-	DEFAM(ncyc, ak, "(n list --> list) concatenates n copies of a finite list.")
+	DEFAM(ncyc, ak, "(list n --> list) concatenates n copies of a finite list.")
 	DEF(rcyc, 1, 1, "(ref --> list) gets a new list from ref each time list is exhausted.")
 
 	vm.defautomap("X", "ak", repeat_, "(value n --> stream) makes a list containing n copies of value. If value is a function, then the results of applying the function with an integer count argument is used as the contents of the output list.");

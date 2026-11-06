@@ -15,6 +15,7 @@
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "dsp.hpp"
+#include "ErrorCodes.hpp"
 #include <string.h>
 #include <stdio.h>
 #include <cmath>
@@ -243,42 +244,49 @@ void initFFT()
 	}
 }
 
-void fft(int n, double* inReal, double* inImag, double* outReal, double* outImag)
+void post(const char* fmt, ...);
+
+// only sizes kMinFFTLogSize..kMaxFFTLogSize have plans; anything else would index past ffts[]
+static FFT& fftForSize(int n)
 {
 	int log2n = n == 0 ? 0 : 64 - __builtin_clzll(n - 1);
-        ffts[log2n].forward(inReal, inImag, outReal, outImag);
+	if (log2n < kMinFFTLogSize || log2n > kMaxFFTLogSize) {
+		post("fft : size %d is out of range (%d to %d).\n", n, 1 << kMinFFTLogSize, 1 << kMaxFFTLogSize);
+		throw errFailed;
+	}
+	return ffts[log2n];
+}
+
+void fft(int n, double* inReal, double* inImag, double* outReal, double* outImag)
+{
+	fftForSize(n).forward(inReal, inImag, outReal, outImag);
 }
 
 void ifft(int n, double* inReal, double* inImag, double* outReal, double* outImag)
 {
-	int log2n = n == 0 ? 0 : 64 - __builtin_clzll(n - 1);
-        ffts[log2n].backward(inReal, inImag, outReal, outImag);
+	fftForSize(n).backward(inReal, inImag, outReal, outImag);
 }
 
 void fft(int n, double* ioReal, double* ioImag)
 {
-	int log2n = n == 0 ? 0 : 64 - __builtin_clzll(n - 1);
-        ffts[log2n].forward_in_place(ioReal, ioImag);
+	fftForSize(n).forward_in_place(ioReal, ioImag);
 }
 
 void ifft(int n, double* ioReal, double* ioImag)
 {
-	int log2n = n == 0 ? 0 : 64 - __builtin_clzll(n - 1);
-        ffts[log2n].backward_in_place(ioReal, ioImag);
+	fftForSize(n).backward_in_place(ioReal, ioImag);
 }
 
 
 void rfft(int n, double* inReal, double* outReal, double* outImag)
 {
-	int log2n = n == 0 ? 0 : 64 - __builtin_clzll(n - 1);
-        ffts[log2n].forward_real(inReal, outReal, outImag);
+	fftForSize(n).forward_real(inReal, outReal, outImag);
 }
 
 
 void rifft(int n, double* inReal, double* inImag, double* outReal)
 {
-	int log2n = n == 0 ? 0 : 64 - __builtin_clzll(n - 1);
-        ffts[log2n].backward_real(inReal, inImag, outReal);
+	fftForSize(n).backward_real(inReal, inImag, outReal);
 }
 
 

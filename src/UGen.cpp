@@ -4606,7 +4606,7 @@ void AddUGenOps()
 	vm.addBifHelp("   delay - a time in seconds. a period of time before the attack segment where the amplitude is zero.");
 	vm.addBifHelp("   attack - a time in seconds to rise from zero to the level specified by the amp argument.");
 	vm.addBifHelp("   hold - a time in seconds to hold at the level specified by the amp argument.");
-	vm.addBifHelp("   delay - a time in seconds to fall from amp to the sustain level.");
+	vm.addBifHelp("   decay - a time in seconds to fall from amp to the sustain level.");
 	vm.addBifHelp("   sustain - a level from zero to one which is multiplied by the amp argument. The envelope holds at this level until released.");
 	vm.addBifHelp("   release - a time in seconds to fall from the current level to zero. A release begins whenever the beat time (the integral of tempo), exceeds dur.");
 	vm.addBifHelp("   amp - an amplitude that scales the peak and sustain levels of the envelope.");

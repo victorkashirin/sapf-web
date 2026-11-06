@@ -557,7 +557,7 @@ nyq .9 * = nyq90   ;; 90 percent of nyquist
 \in dly dcy 
 	"(in delayTime decayTime --> out) four stage stereo allpass with random delay times"
 	[	
-		in size 2 | = n
+		`in type 'ZList equals 2 \[in size 2 |] if = n
 		\z[ z \[.1m dly rand] n X aa dcy alpasn] = r
 		in r r r r
 	] = apverb4

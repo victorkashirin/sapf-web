@@ -491,6 +491,12 @@ pedalo equals
 editable-scrollable-pane equals
 "
 
+
+;; upstream bugs: lfnoise/sapf#8 #14 #2
+".25 .5 3 blip 1 N #[1] equals"
+"11 [0 3 6 9 12] keydeg 4 equals"
+"0 .1 sinosc 2 1 apverb4 size 2 equals"
+
 ] aa pr cr
 \s [ "Testing : " pr s pr cr
 	s compile !
