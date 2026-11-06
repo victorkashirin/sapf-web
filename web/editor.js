@@ -8,7 +8,7 @@ import { tags as t } from '@lezer/highlight';
 import { completionStatus } from '@codemirror/autocomplete';
 import docs from './build/sapf-docs.json';
 import { lineAt, blockAt, paragraphAt, formatSapf, playsSound } from './sapf-text.mjs';
-export { lineAt, playsSound }; // for the page's Run button and replace option
+export { lineAt, blockAt, paragraphAt, playsSound }; // for the page's run buttons and Solo
 
 const byName = new Map(docs.map(d => [d.name, d]));
 const WORD = /[^\s()[\]{}";]/; // sapf words include operators: + *, >sf, sf>, +/ ...
@@ -80,7 +80,7 @@ const flashField = StateField.define({
 });
 
 // run(code) evaluates code in sapf; onChange(text), if given, gets the text after each edit. Returns the EditorView,
-// with setDoc(text): replaces the text and the undo history (so undo can't bring back another file), without onChange.
+// with evalWith(lineAt | blockAt | paragraphAt) and setDoc(text): replaces the text and the undo history (so undo can't bring back another file), without onChange.
 export function createEditor(parent, doc, run, onChange) {
   let flashTimer;
   const evalWith = pick => view => {
@@ -133,6 +133,7 @@ export function createEditor(parent, doc, run, onChange) {
     EditorView.updateListener.of(u => { if (u.docChanged && onChange) onChange(u.state.doc.toString()); }),
   ];
   const view = new EditorView({ parent, state: EditorState.create({ doc, extensions }) });
+  view.evalWith = pick => evalWith(pick)(view); // the run buttons: same flash and code as the keys
   view.setDoc = text => {
     view.setState(EditorState.create({ doc: text, extensions }));
     view.scrollDOM.scrollTo(0, 0); // setState keeps the old scroll position

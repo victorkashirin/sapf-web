@@ -185,7 +185,7 @@ Two build choices matter for speed:
 | `smoke.mjs` | Node test (assert-based), using `build/sapf-node.mjs` (or `SAPF_NODE_MODULE`). Also runs `unit-tests.txt`. |
 | `run-examples.mjs` | Runs every example in `sapf-examples.txt` on a Node build, rendering audio for the ones that play. Stops at the first sanitizer report. |
 | `serve.py` | Dev server with the cross-origin isolation headers. |
-| `index.html` | The page: editor and console side by side, File menu, Sounds menu (sound bank), Run/Stop/Add control buttons, page sliders, About dialog. |
+| `index.html` | The page: editor and console side by side, File menu, Sounds menu (sound bank), Stop/Add control buttons, Line/Block/Para run buttons on the editor's strip, page sliders, About dialog. |
 | `sounds/` | Built-in sounds, loaded into `/sounds` in sapf's file system with the page (`blip.wav`). |
 | `editor.js` | The page's code editor: CodeMirror 6 with the features of the [vs-sapf](https://github.com/victorkashirin/vs-sapf) VS Code extension (highlighting, hover docs, completion, line/block/paragraph evaluation, formatting). `npm run build` (in `web/`, called by `build.sh`) bundles it with esbuild into `build/editor.js`. |
 | `sapf-text.mjs` | Text logic ported from vs-sapf: the line, `( )` block and paragraph under the cursor, the formatter, and the `helpall` parser. Tested by `sapf-text.test.mjs`. |
@@ -238,6 +238,8 @@ The keys follow vs-sapf:
 | Cmd/Ctrl+Shift+Enter | evaluate the selection or the paragraph (text between blank lines) |
 | Esc or Cmd/Ctrl+. | `stop` |
 | Cmd/Ctrl+Shift+. | `clear` (clears the stack) |
+
+Without a keyboard (phones, tablets), the Line, Block and Para buttons on the editor's title strip do the same as the three Enter keys.
 | Cmd/Ctrl+K | clear the console (also the Clear button above it) |
 | Shift+Alt+F | format (vs-sapf uses Cmd/Ctrl+Shift+I, which opens the browser's devtools) |
 | Ctrl+Space (Mac: also Option+` or Option+I) | open completion, even with nothing typed |

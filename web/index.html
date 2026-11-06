@@ -53,7 +53,9 @@
   }
   button:hover, .btn:hover { background: linear-gradient(#52565e, #383b41); }
   button:active, .btn:active { transform: translateY(2px); background: linear-gradient(#36393e, #303338); box-shadow: inset 0 1px 2px #0008, 0 0 0 #131518; }
-  #run { color: var(--amber); }
+  #runs { float: right; margin-top: -2px; display: none; gap: 4px; } /* keyboards have the Enter keys */
+  #runs button { padding: 6px 14px; font-size: 11px; letter-spacing: .1em; color: var(--amber); } /* finger-sized */
+  @media (pointer: coarse) { #runs { display: flex; } }
   .toggles { display: inline-flex; gap: 6px; } /* wrap together */
   .break { display: none; } /* the mobile header's row break */
   button.icon { padding: 4px 8px; line-height: 0; color: var(--dim); }
@@ -178,15 +180,19 @@
   @media (max-width: 760px) {
     main { padding: 10px 16px 16px; }
     .panel > .tag { cursor: auto; touch-action: auto; } /* the narrow layout is fixed: nothing to drag */
-    /* two rows: brand, menus and view toggles; then the transport (Run, Stop, Add control share the
+    #clearLog { padding: 6px 14px; font-size: 11px; } /* finger-sized */
+    .panel > .tag { display: flex; align-items: center; gap: .5em; white-space: nowrap; }
+    #fileLabel { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+    #runs, #clearLog { float: none; margin: -4px 0 0 auto; }
+    /* two rows: brand, menus and view toggles; then the transport (Stop and Add control share the
        spare width, up to 10em each), the Solo LED and ?. `order` moves the toggles up; GitHub is in About. */
     header { padding: 10px 16px 2px; gap: 10px 6px; }
     .brand { margin-right: 0; }
     .gh { display: none; }
     .toggles { margin-left: auto; }
     .break { display: block; flex-basis: 100%; order: 1; }
-    #run, #stop, #addSlider, .led, #about { order: 2; }
-    #run, #stop, #addSlider { flex: 1 1 auto; max-width: 10em; white-space: nowrap; }
+    #stop, #addSlider, .led, #about { order: 2; }
+    #stop, #addSlider { flex: 1 1 auto; max-width: 10em; white-space: nowrap; }
   }
 </style>
 <header>
@@ -214,7 +220,7 @@
       <div class="hint">Click a sound to insert <code>"name" sf&gt;</code> at the cursor. Uploads stay in this browser.</div>
     </div>
   </details>
-  <button id="run">Run</button><button id="stop">Stop</button><button id="addSlider">Add control</button>
+  <button id="stop">Stop</button><button id="addSlider">Add control</button>
   <span class="break" aria-hidden="true"></span>
   <span class="toggles"><button id="showScope" class="icon" aria-pressed="true" title="Show or hide the scope" aria-label="Scope"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1 8Q3.5 1 6 8T11 8T16 8"/></svg></button>
   <button id="showFall" class="icon" aria-pressed="true" title="Show or hide the spectrum" aria-label="Spectrum"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 14V9M5.5 14V4M8.5 14V7M11.5 14V2M14.5 14V10"/></svg></button></span>
@@ -246,7 +252,7 @@
   </div>
 </dialog>
 <main>
-  <section class="panel" data-panel="editor"><div class="tag">editor <span id="fileLabel"></span></div><div class="screen" id="code"></div></section>
+  <section class="panel" data-panel="editor"><div class="tag">editor <span id="fileLabel"></span><span id="runs"><button data-run="line" title="Run the selection or the line (Mod+Enter)">Line</button><button data-run="block" title="Run the selection or the ( ) block around the cursor (Shift+Enter)">Block</button><button data-run="paragraph" title="Run the selection or the paragraph (Mod+Shift+Enter)">Para</button></span></div><div class="screen" id="code"></div></section>
   <section class="panel" data-panel="console"><div class="tag">console <button id="clearLog" title="Clear console (Mod+K)">Clear</button></div><div id="controls"></div><pre class="screen" id="log"></pre></section>
   <section class="panel" data-panel="scope"><div class="tag">scope</div><canvas class="screen" id="scope" role="img" aria-label="Oscilloscope of the output" title="Drag sideways for the time shown, up or down for the gain"></canvas></section>
   <section class="panel" data-panel="fall"><div class="tag">spectrum</div><canvas class="screen" id="fall" role="img" aria-label="Spectrogram of the output" title="Drag sideways for the time shown, up or down for the brightness"></canvas></section>
@@ -270,6 +276,7 @@ clear                 ; empty the stack (or Mod+Shift+.)
 [300 301] 0 saw .05 * play      ; a list makes stereo; the sides beat at 1 Hz
 
 ; Mod+Shift+Enter runs this whole paragraph; Shift+Enter runs the innermost ( ) around the cursor
+; no keyboard? tap a line, then Line, Block or Para above the editor
 (
   (1 0 impulse .3 decay) (.2 2X white) *    ; a noise burst each second
   (1/20 0 sinosc 1m .2 bilin)               ; delay time sweeping 1 ms to .2 s
@@ -307,7 +314,7 @@ print(`; keys (Mod = Cmd/Ctrl)
 ; current sound before code that plays.
 `, 'dim');
 import createSapf from './build/sapf.mjs';
-import { createEditor, lineAt, playsSound } from './build/editor.js';
+import { createEditor, lineAt, blockAt, paragraphAt, playsSound } from './build/editor.js';
 
 // Code is evaluated on a wasm pthread and audio renders in a Wasm Audio Worklet; both share
 // memory, which needs cross-origin isolation (serve with web/serve.py).
@@ -830,10 +837,11 @@ document.addEventListener('click', e => {
 });
 fileMenu.onkeydown = e => e.key === 'Escape' && closeMenu();
 soundMenu.onkeydown = e => { if (e.key === 'Escape') { soundMenu.open = false; editor.focus(); } };
-document.getElementById('run').onclick = () => {
-  const { from, to } = editor.state.selection.main;
-  evalCode(lineAt(editor.state.doc.toString(), from, to).code);
-};
+const picks = { line: lineAt, block: blockAt, paragraph: paragraphAt };
+for (const b of document.querySelectorAll('#runs button')) {
+  b.onmousedown = e => e.preventDefault(); // keep the editor's focus, and on phones its keyboard state
+  b.onclick = () => editor.evalWith(picks[b.dataset.run]);
+}
 document.getElementById('stop').onclick = () => run('stop');
 const clearLog = () => log.replaceChildren();
 document.getElementById('clearLog').onclick = clearLog;
