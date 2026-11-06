@@ -845,7 +845,7 @@ async function listSounds() {
   for (const name of [...new Set([...builtinSounds, ...userSounds])].sort()) {
     const row = document.createElement('div');
     row.className = 'file';
-    row.innerHTML = '<button class="del play" aria-pressed="false">▶</button><button class="item"></button><span class="ch"></span>' +
+    row.innerHTML = '<button class="del play" aria-pressed="false">▶&#xFE0E;</button><button class="item"></button><span class="ch"></span>' +
       (userSounds.has(name) ? '<button class="del">×</button>' : '<span class="del gap" aria-hidden="true">×</span>');
     const [play, insert, ch, x] = row.children, n = soundChannels.get(name), del = userSounds.has(name) && x;
     insert.textContent = name;
@@ -873,7 +873,8 @@ async function listSounds() {
 // the list, which takes its ■ away. previewing is set before the decode, so a click while a long
 // file decodes stops it rather than starting a second one.
 let previewCtx, previewing;
-const showPlaying = (btn, on) => { btn.classList.toggle('on', on); btn.textContent = on ? '■' : '▶'; btn.setAttribute('aria-pressed', on); };
+// FE0E: text style, or iOS draws ▶ as an emoji
+const showPlaying = (btn, on) => { btn.classList.toggle('on', on); btn.textContent = on ? '■' : '▶\uFE0E'; btn.setAttribute('aria-pressed', on); };
 function stopPreview() {
   if (!previewing) return;
   const { src, btn } = previewing;
