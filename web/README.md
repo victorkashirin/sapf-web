@@ -36,8 +36,8 @@ What works:
   through its writer thread. Files live in Emscripten's in-memory file system; recordings go to
   `/tmp` as on the desktop.
 - `sgram` writes spectrogram JPEGs through libjpeg (to `/tmp`).
-- Sound bank: the Sounds menu uploads sound files, lists them, and inserts `"name" sf>` at the
-  cursor. Files live in `/sounds`, sapf's working directory, so `"blip.wav" sf>` reads one.
+- Sound bank: the Sounds menu uploads sound files (or drop them anywhere on the page), lists them
+  with a ▶ preview (played by the browser, apart from sapf), and inserts `"name" sf>` at the cursor. Files live in `/sounds`, sapf's working directory, so `"blip.wav" sf>` reads one.
   Built-in sounds are served from `web/sounds` (`blip.wav`, which also replaces the macOS-only
   `/System/Library/Sounds/Submarine.aiff` in the built-in function examples). Uploads are kept in
   IndexedDB and survive a reload. Formats libsndfile cannot read (MP3, Ogg, FLAC, ...) are decoded

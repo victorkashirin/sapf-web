@@ -26,7 +26,7 @@ On touch screens, the Line, Block and Para buttons on the editor's title strip d
 
 Web-only features:
 
-- **Sounds menu.** Upload sound files and use them as `"name.wav" sf>`. Uploads survive a reload.
+- **Sounds menu.** Upload sound files (or drop them on the page), preview them, and use them as `"name.wav" sf>`. Uploads survive a reload.
 - **Sliders.** `"freq" 100 2000 440 xslider` adds a slider under the editor and returns its signal.
 - **Files.** The File menu saves named texts in the browser and opens the example files.
 - **My prelude.** A saved file that loads after the built-in prelude on every start; the `prelude` word opens it.

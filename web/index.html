@@ -92,6 +92,8 @@
   .pop .gap { visibility: hidden; } /* where × would be, so labels line up */
   .pop .del { flex: none; width: auto; color: var(--dim); }
   .pop .del:hover, .pop .del:focus-visible { background: none; color: var(--red); }
+  .pop .play { width: 24px; padding: 5px 0 5px 6px; text-align: center; } /* fixed width: ▶ and ■ differ, and the name must not shift */
+  .pop .play:hover, .pop .play:focus-visible, .pop .play.on { color: var(--amber); }
   .pop .tag { font-size: 10px; font-weight: 600; letter-spacing: .08em; padding: 10px 8px 4px; margin-top: 4px; border-top: 1px solid #ffffff0d; }
   .pop .none { color: var(--dim); padding: 5px 8px; }
   #fileList .item, #soundList .item, .pop .none, .pop [data-example], .pop .prelude { padding-left: 18px; } /* entries under a heading */
@@ -237,7 +239,7 @@
       <input type="file" id="soundFile" accept="audio/*,.wav,.aif,.aiff,.caf,.au" multiple hidden>
       <div class="tag">sounds</div>
       <div id="soundList"></div>
-      <div class="hint">Click a sound to insert <code>"name" sf&gt;</code> at the cursor. Uploads stay in this browser.</div>
+      <div class="hint">Click a sound to insert <code>"name" sf&gt;</code> at the cursor. Drop audio files on the page to add them. Uploads stay in this browser.</div>
     </div>
   </details>
   <button id="stop">Stop</button><button id="addSlider">Add control</button>
@@ -836,18 +838,22 @@ fileMenu.ontoggle = () => {
 };
 const soundMenu = document.getElementById('soundMenu'), soundFile = document.getElementById('soundFile');
 async function listSounds() {
+  stopPreview();
   await soundsReady;
   const list = document.getElementById('soundList');
   list.replaceChildren();
   for (const name of [...new Set([...builtinSounds, ...userSounds])].sort()) {
     const row = document.createElement('div');
     row.className = 'file';
-    row.innerHTML = '<button class="item"></button><span class="ch"></span>' +
+    row.innerHTML = '<button class="del play" aria-pressed="false">▶</button><button class="item"></button><span class="ch"></span>' +
       (userSounds.has(name) ? '<button class="del">×</button>' : '<span class="del gap" aria-hidden="true">×</span>');
-    const [insert, ch, x] = row.children, n = soundChannels.get(name), del = userSounds.has(name) && x;
+    const [play, insert, ch, x] = row.children, n = soundChannels.get(name), del = userSounds.has(name) && x;
     insert.textContent = name;
     ch.textContent = n === 1 ? 'mono' : n === 2 ? 'stereo' : n ? n + ' ch' : '';
     insert.title = [userSounds.has(name) ? 'uploaded' : 'built-in', ch.textContent].filter(Boolean).join(', ');
+    play.title = `Preview "${name}"`;
+    play.setAttribute('aria-label', play.title);
+    play.onclick = () => preview(name, play);
     insert.onclick = () => {
       soundMenu.open = false;
       editor.dispatch(editor.state.replaceSelection(`"${name}" sf> `));
@@ -862,6 +868,39 @@ async function listSounds() {
   }
   if (!list.children.length) list.innerHTML = '<div class="none">no sounds yet</div>';
 }
+// Preview a sound through its own AudioContext, apart from sapf's: Stop and Solo leave it alone.
+// Clicking ▶ again (or another sound's) stops the one playing, and so does closing or rebuilding
+// the list, which takes its ■ away. previewing is set before the decode, so a click while a long
+// file decodes stops it rather than starting a second one.
+let previewCtx, previewing;
+const showPlaying = (btn, on) => { btn.classList.toggle('on', on); btn.textContent = on ? '■' : '▶'; btn.setAttribute('aria-pressed', on); };
+function stopPreview() {
+  if (!previewing) return;
+  const { src, btn } = previewing;
+  previewing = null;
+  if (src) { src.onended = null; src.stop(); }
+  showPlaying(btn, false);
+}
+async function preview(name, btn) {
+  const was = previewing?.btn;
+  stopPreview();
+  if (was === btn) return;
+  previewCtx ??= new AudioContext(); // inside the click, so the browser lets it start
+  const me = previewing = { btn };
+  showPlaying(btn, true);
+  let buf;
+  try { buf = await previewCtx.decodeAudioData((await soundsReady).FS.readFile(`${SOUNDS}/${name}`).slice().buffer); }
+  catch {
+    if (previewing === me) stopPreview();
+    return print(`This browser cannot play ${name} for a preview; sapf can still read it.`, 'err');
+  }
+  if (previewing !== me) return; // stopped while decoding
+  const src = me.src = previewCtx.createBufferSource();
+  src.buffer = buf;
+  src.connect(previewCtx.destination);
+  src.onended = () => { previewing = null; showPlaying(btn, false); };
+  src.start();
+}
 // A menu's popup stays 16px inside the window: on phones the Sounds one would run off the right edge.
 function fitPop(menu) {
   const pop = menu.querySelector('.pop');
@@ -870,9 +909,20 @@ function fitPop(menu) {
   const r = pop.getBoundingClientRect(), w = document.documentElement.clientWidth, left = Math.max(16, Math.min(r.left, w - 16 - r.width));
   pop.style.left = left - menu.getBoundingClientRect().left + 'px';
 }
-soundMenu.ontoggle = () => soundMenu.open && (fitPop(soundMenu), listSounds());
+soundMenu.ontoggle = () => soundMenu.open ? (fitPop(soundMenu), listSounds()) : stopPreview();
 document.getElementById('upload').onclick = () => soundFile.click();
 soundFile.onchange = async () => { await addSounds([...soundFile.files]); soundFile.value = ''; listSounds(); };
+// Audio files dropped anywhere join the sounds. Capture phase, so the editor does not paste them as
+// text; other dropped files go on to it as before.
+const isAudio = f => f.type.startsWith('audio/') || SNDFILE.test(f.name) || /\.(mp3|ogg|oga|opus|flac|m4a|aac|webm)$/i.test(f.name);
+addEventListener('dragover', e => { if (e.dataTransfer.types.includes('Files')) e.preventDefault(); }, true);
+addEventListener('drop', async e => {
+  const files = [...e.dataTransfer.files].filter(isAudio);
+  if (!files.length) return;
+  e.preventDefault(); e.stopPropagation();
+  await addSounds(files);
+  if (soundMenu.open) listSounds();
+}, true);
 document.addEventListener('click', e => {
   for (const menu of [fileMenu, soundMenu]) if (menu.open && !menu.contains(e.target)) menu.open = false;
 });
