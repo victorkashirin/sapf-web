@@ -951,11 +951,12 @@ document.addEventListener('keydown', e => {
 // Panels are moved, never rebuilt, so the editor, console and canvases keep their state.
 const main = document.querySelector('main'), drop = document.getElementById('drop');
 const panels = Object.fromEntries([...main.children].map(p => [p.dataset.panel, p]));
-// Narrow screens get a fixed stack (editor, console, then scope beside spectrum) with its own
-// resizable shares; panels move only on wide ones.
+// Narrow screens get a fixed stack (console, editor, then scope beside spectrum) with its own
+// resizable shares; panels move only on wide ones. The console is on top so the on-screen keyboard,
+// which covers the bottom while typing, never hides the output.
 const stacked = matchMedia('(max-width: 760px)');
 const WIDE = { dir: 'row', f: .5, a: 'editor', b: { dir: 'col', f: .72, a: 'console', b: { dir: 'row', f: .5, a: 'scope', b: 'fall' } } };
-const NARROW = { dir: 'col', f: .5, a: 'editor', b: { dir: 'col', f: .65, a: 'console', b: { dir: 'row', f: .5, a: 'scope', b: 'fall' } } };
+const NARROW = { dir: 'col', f: .3, a: 'console', b: { dir: 'col', f: .7, a: 'editor', b: { dir: 'row', f: .5, a: 'scope', b: 'fall' } } };
 const leaves = n => typeof n === 'string' ? [n] : [...leaves(n.a), ...leaves(n.b)];
 function loadLayout(key, fallback) {
   try {
@@ -965,11 +966,11 @@ function loadLayout(key, fallback) {
   return structuredClone(fallback);
 }
 let layout = loadLayout('layout', WIDE);
-const narrow = loadLayout('layoutNarrow', NARROW);
+const narrow = loadLayout('layoutNarrow2', NARROW);
 const tree = () => stacked.matches ? narrow : layout;
 // Both trees: a drag that outlives a switch between them (the window crossing 760px) still saves the one it changed.
-const saveLayout = () => { store.set('layout', JSON.stringify(layout)); store.set('layoutNarrow', JSON.stringify(narrow)); };
-['split', 'scopeH'].forEach(store.del); // the old fixed splitters' settings
+const saveLayout = () => { store.set('layout', JSON.stringify(layout)); store.set('layoutNarrow2', JSON.stringify(narrow)); };
+['split', 'scopeH', 'layoutNarrow'].forEach(store.del); // old settings: fixed splitters, the editor-first phone stack
 const shown = n => typeof n === 'string' ? !panels[n].hidden : shown(n.a) || shown(n.b);
 const MIN = 72, BAR = 14; // px a panel keeps (its title strip and some screen); a splitter's thickness (.tile's 14px)
 // The px a subtree needs along a split's axis: panels in line add up with their splitters, panels across take the most.
