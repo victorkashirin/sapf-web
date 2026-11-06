@@ -55,6 +55,7 @@
   button:active, .btn:active { transform: translateY(2px); background: linear-gradient(#36393e, #303338); box-shadow: inset 0 1px 2px #0008, 0 0 0 #131518; }
   #run { color: var(--amber); }
   .toggles { display: inline-flex; gap: 6px; } /* wrap together */
+  .break { display: none; } /* the mobile header's row break */
   button.icon { padding: 4px 8px; line-height: 0; color: var(--dim); }
   button.icon svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
   button.icon[aria-pressed="true"] { color: var(--phosphor); }
@@ -106,8 +107,16 @@
   .led input:checked { background: var(--phosphor); box-shadow: 0 0 6px var(--phosphor), inset 0 -1px 2px #0005; }
   :focus-visible { outline: 1px solid var(--amber); outline-offset: 2px; }
 
-  /* --a/--b: the panels' shares, set by dragging the splitter */
-  main { display: grid; grid-template-columns: minmax(0, var(--a, 1fr)) 14px minmax(0, var(--b, 1fr)); padding: 12px 16px 16px; min-height: 0; }
+  /* Tiles: each splits in two, side by side (.row) or stacked (.col); --a/--b are the halves' shares, set by dragging the splitter */
+  main, .tile { display: grid; grid-template: minmax(0, 1fr) / minmax(0, 1fr); min-width: 0; min-height: 0; }
+  main { padding: 12px 16px 16px; }
+  .tile.row { grid-template-columns: minmax(0, var(--a)) 14px minmax(0, var(--b)); }
+  .tile.col { grid-template-rows: minmax(0, var(--a)) 14px minmax(0, var(--b)); }
+  /* a panel's title strip is its handle: drop it on another panel's edge to split there, on its middle to swap */
+  .panel > .tag { cursor: grab; touch-action: none; user-select: none; }
+  .panel.dragging { opacity: .45; }
+  .panel.dragging > .tag { cursor: grabbing; }
+  #drop { position: fixed; z-index: 20; pointer-events: none; border-radius: 12px; border: 2px solid var(--amber); background: #ffb4541a; box-shadow: 0 0 16px #ffb45433; }
   /* splitter with an engraved grip */
   .split { display: flex; align-items: center; justify-content: center; cursor: col-resize; touch-action: none; }
   .split::before { content: ""; width: 7px; height: 32px; background: repeating-linear-gradient(90deg, #000b 0 1px, #ffffff18 1px 2px, transparent 2px 3px); }
@@ -132,16 +141,12 @@
       repeating-linear-gradient(0deg, #00000038 0 1px, transparent 1px 3px),
       radial-gradient(ellipse at center, #0e1611, #070a08 85%);
   }
-  /* right column: console over the scope */
-  .col { display: grid; grid-template-rows: minmax(0, 1fr); grid-auto-rows: auto; min-height: 0; }
   [hidden] { display: none !important; } /* over .panel's and .split's display: flex */
   .split.row { height: 14px; cursor: row-resize; }
   .split.row::before { width: 32px; height: 7px; background: repeating-linear-gradient(#000b 0 1px, #ffffff18 1px 2px, transparent 2px 3px); }
   .split.row:hover::before, .split.row.drag::before { background: repeating-linear-gradient(#000b 0 1px, #ffb45466 1px 2px, transparent 2px 3px); }
-  /* scope and spectrum panels side by side; --viz-h is their screens' height, set by the splitter */
-  .viz { display: flex; gap: 14px; min-width: 0; }
-  .viz > .panel { flex: 1; min-width: 0; }
-  .viz canvas { display: block; flex: none; cursor: move; touch-action: none; width: 100%; height: var(--viz-h, 140px);
+  /* flex-basis 0: the canvas fills its panel, never sized by its own pixel buffer */
+  canvas.screen { display: block; flex: 1 1 0; cursor: move; touch-action: none; width: 100%;
     background: repeating-linear-gradient(0deg, #00000038 0 1px, transparent 1px 3px), radial-gradient(ellipse at center, #0e1611, #070a08 85%); }
   #log .in { color: var(--amber); text-shadow: 0 0 5px #ffb45444; }
   #log .err { color: var(--red); text-shadow: 0 0 5px #ff7b7244; }
@@ -171,12 +176,17 @@
   }
 
   @media (max-width: 760px) {
-    main { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, var(--a, 3fr)) 14px minmax(0, var(--b, 2fr)); padding: 10px 16px 16px; }
-    .split { cursor: row-resize; }
-    .split::before { width: 32px; height: 7px; background: repeating-linear-gradient(#000b 0 1px, #ffffff18 1px 2px, transparent 2px 3px); }
-    .split:hover::before, .split.drag::before { background: repeating-linear-gradient(#000b 0 1px, #ffb45466 1px 2px, transparent 2px 3px); }
-    header { padding: 10px 16px 2px; }
-    .viz canvas { height: var(--viz-h, 90px); }
+    main { padding: 10px 16px 16px; }
+    .panel > .tag { cursor: auto; touch-action: auto; } /* the narrow layout is fixed: nothing to drag */
+    /* two rows: brand, menus and view toggles; then the transport (Run, Stop, Add control share the
+       spare width, up to 10em each), the Solo LED and ?. `order` moves the toggles up; GitHub is in About. */
+    header { padding: 10px 16px 2px; gap: 10px 6px; }
+    .brand { margin-right: 0; }
+    .gh { display: none; }
+    .toggles { margin-left: auto; }
+    .break { display: block; flex-basis: 100%; order: 1; }
+    #run, #stop, #addSlider, .led, #about { order: 2; }
+    #run, #stop, #addSlider { flex: 1 1 auto; max-width: 10em; white-space: nowrap; }
   }
 </style>
 <header>
@@ -205,9 +215,10 @@
     </div>
   </details>
   <button id="run">Run</button><button id="stop">Stop</button><button id="addSlider">Add control</button>
-  <label class="led"><input type="checkbox" id="replace" checked> Replace sound</label>
+  <span class="break" aria-hidden="true"></span>
   <span class="toggles"><button id="showScope" class="icon" aria-pressed="true" title="Show or hide the scope" aria-label="Scope"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1 8Q3.5 1 6 8T11 8T16 8"/></svg></button>
   <button id="showFall" class="icon" aria-pressed="true" title="Show or hide the spectrum" aria-label="Spectrum"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 14V9M5.5 14V4M8.5 14V7M11.5 14V2M14.5 14V10"/></svg></button></span>
+  <label class="led" title="Solo: running code that plays stops the current sound first, so only the new one plays. Turn off to layer sounds."><input type="checkbox" id="replace" checked> Solo</label>
   <button id="about" class="round" title="About" aria-label="About">?</button>
   <a class="gh" href="https://github.com/victorkashirin/sapf-web"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a>
 </header>
@@ -235,18 +246,12 @@
   </div>
 </dialog>
 <main>
-  <section class="panel"><div class="tag">editor <span id="fileLabel"></span></div><div class="screen" id="code"></div></section>
-  <div class="split" id="split" role="separator" tabindex="0" aria-label="Resize editor and console"
-    aria-orientation="vertical" aria-valuemin="15" aria-valuemax="85" aria-valuenow="50"></div>
-  <div class="col">
-  <section class="panel"><div class="tag">console <button id="clearLog" title="Clear console (Mod+K)">Clear</button></div><div id="controls"></div><pre class="screen" id="log"></pre></section>
-  <div class="split row" id="scopeSplit" role="separator" tabindex="0" aria-label="Resize console and scope panels" aria-orientation="horizontal"></div>
-  <div class="viz">
-    <section class="panel"><div class="tag">scope</div><canvas class="screen" id="scope" role="img" aria-label="Oscilloscope of the output" title="Drag sideways for the time shown, up or down for the gain"></canvas></section>
-    <section class="panel"><div class="tag">spectrum</div><canvas class="screen" id="fall" role="img" aria-label="Spectrogram of the output" title="Drag sideways for the time shown, up or down for the brightness"></canvas></section>
-  </div>
-  </div>
+  <section class="panel" data-panel="editor"><div class="tag">editor <span id="fileLabel"></span></div><div class="screen" id="code"></div></section>
+  <section class="panel" data-panel="console"><div class="tag">console <button id="clearLog" title="Clear console (Mod+K)">Clear</button></div><div id="controls"></div><pre class="screen" id="log"></pre></section>
+  <section class="panel" data-panel="scope"><div class="tag">scope</div><canvas class="screen" id="scope" role="img" aria-label="Oscilloscope of the output" title="Drag sideways for the time shown, up or down for the gain"></canvas></section>
+  <section class="panel" data-panel="fall"><div class="tag">spectrum</div><canvas class="screen" id="fall" role="img" aria-label="Spectrogram of the output" title="Drag sideways for the time shown, up or down for the brightness"></canvas></section>
 </main>
+<div id="drop" hidden></div>
 <script type="text/plain" id="example">; Welcome to SAPF (Sound As Pure Form), a stack language for sound.
 ; Put the cursor on a line and press Mod+Enter (Cmd/Ctrl+Enter) to run it.
 ; Esc stops the sound. Hover any word to read its docs.
@@ -298,8 +303,8 @@ print(`; keys (Mod = Cmd/Ctrl)
 ;   Mod+K            clear console
 ;   Shift+Alt+F      format
 ;   Ctrl+Space       complete (Mac: also Opt+\` or Opt+I)
-; hover a word for docs. "Replace sound"
-; stops the current sound before code that plays.
+; hover a word for docs. "Solo" stops the
+; current sound before code that plays.
 `, 'dim');
 import createSapf from './build/sapf.mjs';
 import { createEditor, lineAt, playsSound } from './build/editor.js';
@@ -484,20 +489,19 @@ async function boot() {
   window.sapf = sapf; window.sapfCtx = ctx; // for debugging in devtools
   // The worklet node appears once its thread starts; tap it then. The analysers' default
   // channelCountMode 'max' downmixes stereo to mono, (L+R)/2. The waveform gets its own, with the
-  // longest buffer, so it can show up to SPAN[0][1] ms; the spectrum keeps a 4096-point FFT.
+  // longest buffer (drawWave keeps a longer history from it); the spectrum keeps a 4096-point FFT.
   const tap = () => {
     const h = sapf._sapf_audio_node();
     if (!h) return setTimeout(tap, 50);
     analyser = new AnalyserNode(ctx, { fftSize: 4096, smoothingTimeConstant: .5, minDecibels: -100, maxDecibels: -10 });
     waveAn = new AnalyserNode(ctx, { fftSize: 32768 });
-    const node = sapf.emscriptenGetAudioObject(h);
-    node.connect(analyser); node.connect(waveAn);
+    vizNode = sapf.emscriptenGetAudioObject(h);
     KEYS.forEach(([sk, lk], i) => {
       if (+store.get(sk)) spans[i] = clampTo(SPAN[i], +store.get(sk));
       const l = parseFloat(store.get(lk)); // a level can be 0 or negative, so not `||`
       if (isFinite(l)) levels[i] = clampTo(LEVEL[i], l);
     });
-    requestAnimationFrame(drawViz);
+    wire();
   };
   tap();
 }
@@ -518,13 +522,14 @@ for (let i = 0; i < 256; i++) {
   const f = b[0] > a[0] ? (v - a[0]) / (b[0] - a[0]) : 0;
   for (let c = 1; c < 4; c++) lut[i * 3 + c - 1] = a[c] + f * (b[c] - a[c]);
 }
-let analyser, waveAn, wave, spec, col, rowMax, last, acc = 0;
-// Dragging over a panel sets, sideways, the time it shows (right = longer, doubling per 80px):
-// the waveform's width in ms, the waterfall's history in seconds; and up or down its level
-// (up = more): the waveform's gain, doubling per 80px, and the waterfall's boost in dB, 12 per
+let analyser, waveAn, waveWin, hist, waveT = 0, spec, col, rowMax, last, acc = 0;
+// Dragging over a panel sets, sideways, the time it shows (right = longer): the waveform's width in
+// ms, following the cube of the drag across its whole range in 800px (doubling per step would crawl
+// at short spans and race at long ones), and the waterfall's history in seconds, doubling per 80px;
+// and up or down its level (up = more): the waveform's gain, doubling per 80px, and the waterfall's boost in dB, 12 per
 // 80px, which lifts quiet partials into the colours (and pushes loud ones to white).
 // All kept in the browser; they load when audio starts, as `store` comes later.
-const SPAN = [[1, 300], [1, 60]], LEVEL = [[1 / 8, 64], [-30, 60]];
+const SPAN = [[1, 2000], [1, 60]], LEVEL = [[1 / 8, 64], [-30, 60]];
 const spans = [20, 10], levels = [1, 0], KEYS = [['scopeMs', 'scopeGain'], ['fallSec', 'fallDb']];
 let hint = { side: 0, until: 0 }; // which panel shows its settings, and until when
 const clampTo = ([lo, hi], v) => Math.max(lo, Math.min(hi, v));
@@ -534,7 +539,8 @@ const clampTo = ([lo, hi], v) => Math.max(lo, Math.min(hi, v));
     c.setPointerCapture(e.pointerId);
     hint = { side, until: Infinity };
     c.onpointermove = e => {
-      const v = clampTo(SPAN[side], s0 * 2 ** ((e.clientX - x0) / 80)), up = (y0 - e.clientY) / 80;
+      const dx = e.clientX - x0, top = SPAN[side][1], up = (y0 - e.clientY) / 80;
+      const v = clampTo(SPAN[side], side ? s0 * 2 ** (dx / 80) : top * clampTo([0, 1], Math.cbrt(s0 / top) + dx / 800) ** 3);
       spans[side] = +v.toPrecision(v < 10 ? 2 : 3);
       levels[side] = side ? Math.round(clampTo(LEVEL[1], l0 + up * 12)) : +clampTo(LEVEL[0], l0 * 2 ** up).toPrecision(2);
       KEYS[side].forEach((k, i) => store.set(k, [spans, levels][i][side]));
@@ -555,30 +561,71 @@ function drawSpan(g, side, now) {
   g.font = `${11 * devicePixelRatio}px ${getComputedStyle(scope).fontFamily}`;
   g.fillStyle = '#ffb454'; g.textAlign = 'right'; g.textBaseline = 'top'; g.shadowColor = '#000'; g.shadowBlur = 3 * devicePixelRatio;
   const level = side ? `${levels[1] > 0 ? '+' : ''}${levels[1]} dB` : `×${levels[0]}`;
-  g.fillText(side ? `${spans[1]} s  ${level}` : `${spans[0]} ms  ${level}`, g.canvas.width - pad, pad);
+  const span = side ? `${spans[1]} s` : spans[0] >= 1000 ? `${spans[0] / 1000} s` : `${spans[0]} ms`;
+  g.fillText(`${span}  ${level}`, g.canvas.width - pad, pad);
   g.shadowBlur = 0;
 }
+// Only shown panels are fed and drawn: a hidden one's analyser is disconnected and its history
+// dropped, so it comes back empty, and with both hidden the frame loop stops.
+let vizNode, vizLoop = false;
+const fed = new Set();
+function wire() {
+  if (!vizNode) return; // audio not started: tap() calls this
+  for (const [an, c] of [[waveAn, scope], [analyser, fall]]) {
+    const on = !c.closest('.panel').hidden;
+    if (on === fed.has(an)) continue;
+    if (on) { vizNode.connect(an); fed.add(an); continue; }
+    vizNode.disconnect(an); fed.delete(an);
+    c.width = 0; // clears what it showed; fit() sizes it again when it is back
+    if (c === scope) hist?.fill(0); else wf.width = 0; // drawFall starts a fresh waterfall
+  }
+  if (fed.size && !vizLoop) { vizLoop = true; last = undefined; requestAnimationFrame(drawViz); }
+}
 function drawViz(now) {
+  vizLoop = fed.size > 0;
+  if (!vizLoop) return;
   requestAnimationFrame(drawViz);
   const dt = Math.min(250, now - (last ?? now)); last = now; // capped: a hidden tab's stall adds no burst of columns
   if (fit(scope)) drawWave(now);
   if (fit(fall)) drawFall(now, dt);
 }
-// The newest `span` samples that start on a rising zero crossing (searching back), drawn as each
-// pixel column's min and max so long spans keep their peaks.
+// The newest `span` samples centred on a rising zero crossing (searching back), as a digital scope
+// puts its trigger mid-screen with what came before it on the left; drawn as each pixel column's
+// min and max so long spans keep their peaks. Short spans place the crossing between samples, so
+// the trace holds still rather than jumping a whole sample's width from frame to frame.
+// The analyser holds 32768 samples (its most), with half kept to search back for the crossing: about
+// 340 ms at 48 kHz. Longer spans read `hist`, twice the longest span, which each frame appends the
+// samples played since the last one (by the audio clock) from the analyser's window.
+// shortcut: the clock and the analyser can disagree by a 128-sample block, a seam too small to see at
+// the spans that use hist; tap the samples in an AudioWorklet if it ever shows.
 function drawWave(now) {
-  const W = scope.width, H = scope.height, n = waveAn.fftSize, pad = 4 * devicePixelRatio | 0, sw = W - 2 * pad;
-  wave ??= new Float32Array(n);
-  waveAn.getFloatTimeDomainData(wave);
+  const W = scope.width, H = scope.height, pad = 4 * devicePixelRatio | 0, sw = W - 2 * pad;
+  const sr = ctx.sampleRate, m = waveAn.fftSize;
+  waveWin ??= new Float32Array(m);
+  hist ??= new Float32Array(Math.ceil(2 * SPAN[0][1] / 1000 * sr));
+  waveAn.getFloatTimeDomainData(waveWin);
+  // After a stall longer than the analyser's window (a background tab), what it missed stays flat, so time keeps its scale.
+  const t1 = ctx.currentTime, k = Math.min(hist.length, Math.round((t1 - waveT) * sr)), got = Math.min(k, m);
+  waveT = t1;
+  if (k > 0) { hist.copyWithin(0, k); hist.fill(0, hist.length - k, hist.length - got); hist.set(waveWin.subarray(m - got), hist.length - got); }
   sg.clearRect(0, 0, W, H);
-  const span = Math.min(n >> 1, Math.round(spans[0] / 1000 * ctx.sampleRate));
-  let t = n - span;
-  for (let i = n - span; i > 0; i--) if (wave[i - 1] <= 0 && wave[i] > 0) { t = i; break; }
+  const want = Math.round(spans[0] / 1000 * sr), wave = want <= m >> 1 ? waveWin : hist, n = wave.length;
+  const span = Math.min(n >> 1, want);
+  // c: the crossing, in samples, with half the span after it still in the buffer and half before it
+  // from the start; with no crossing (silence, or a sound too low for the span), the newest span.
+  const half = span >> 1;
+  let c = n - span + half;
+  for (let i = n - (span - half); i > half; i--)
+    if (wave[i - 1] <= 0 && wave[i] > 0) { c = i - 1 + wave[i - 1] / (wave[i - 1] - wave[i]); break; }
+  const t = Math.floor(c) - half;
   const gain = levels[0], yOf = v => H / 2 - Math.max(-1, Math.min(1, v * gain)) * (H / 2 - pad);
   sg.beginPath();
-  if (span <= sw) for (let i = 0; i < span; i++) { // short spans: a line through the samples
-    const x = pad + i / (span - 1) * sw, y = yOf(wave[t + i]);
-    i ? sg.lineTo(x, y) : sg.moveTo(x, y);
+  if (span <= sw) { // short spans: a line through the samples, edge to edge, sample c at the middle
+    const dx = sw / span, xc = W / 2, s0 = Math.max(0, Math.floor(c - xc / dx)), s1 = Math.min(n - 1, Math.ceil(c + xc / dx));
+    for (let i = s0; i <= s1; i++) {
+      const x = xc + (i - c) * dx, y = yOf(wave[i]);
+      i > s0 ? sg.lineTo(x, y) : sg.moveTo(x, y);
+    }
   }
   else for (let x = 0; x < sw; x++) {
     const i0 = t + Math.floor(x / sw * span), i1 = Math.max(i0 + 1, t + Math.floor((x + 1) / sw * span));
@@ -618,12 +665,16 @@ function drawFall(now, dt) {
   const k = Math.min(w, Math.floor(acc));
   if (k > 0) {
     acc -= k;
+    // The quietest fifth fades out to transparent, so silence shows the panel's own background (as
+    // the scope's does) instead of the colour map's flat near-black.
     for (let y = 0; y < h; y++) {
-      const v = Math.round(Math.max(0, Math.min(1, (rowMax[y] + levels[1] - dbLo) / (dbHi - dbLo))) * 255) * 3, o = (h - 1 - y) * 4;
-      col.data[o] = lut[v]; col.data[o + 1] = lut[v + 1]; col.data[o + 2] = lut[v + 2]; col.data[o + 3] = 255;
+      const i = Math.round(Math.max(0, Math.min(1, (rowMax[y] + levels[1] - dbLo) / (dbHi - dbLo))) * 255), v = i * 3, o = (h - 1 - y) * 4;
+      col.data[o] = lut[v]; col.data[o + 1] = lut[v + 1]; col.data[o + 2] = lut[v + 2]; col.data[o + 3] = Math.min(255, i * 5);
     }
     rowMax.fill(-Infinity);
+    wg.globalCompositeOperation = 'copy'; // shift, not blend: see-through pixels would smear over the old ones
     wg.drawImage(wf, -k, 0);
+    wg.globalCompositeOperation = 'source-over';
     wg.putImageData(col, w - 1, 0);
     if (k > 1) wg.drawImage(wf, w - 1, 0, 1, h, w - k, 0, k - 1, h); // short spans: one reading fills k columns
   }
@@ -640,8 +691,9 @@ async function run(src) {
   sapf.ccall('sapf_eval', null, ['string'], [src + '\n']);
 }
 
-// Evaluating code that plays stops the current sound first, when "Replace sound" is on.
+// Evaluating code that plays stops the current sound first, when "Solo" is on.
 const replace = document.getElementById('replace');
+replace.title = replace.parentNode.title; // the label's tooltip, as the checkbox's description for screen readers too
 const evalCode = src => {
   // Clearing the stack (Mod+Shift+.) clears the sliders too; a slider that runs again
   // gets a fresh row, at the position sapf kept for its name.
@@ -791,77 +843,145 @@ const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
 document.addEventListener('keydown', e => {
   if (e.code === 'KeyK' && (isMac ? e.metaKey : e.ctrlKey) && !e.shiftKey && !e.altKey) { e.preventDefault(); clearLog(); }
 });
-// Splitter: drag it, or focus it and use the arrow keys. Splits left/right, or top/bottom when stacked.
-const split = document.getElementById('split'), stacked = matchMedia('(max-width: 760px)');
-const [editorPanel, , consolePanel] = document.querySelector('main').children;
-let share = stacked.matches ? .6 : .5; // the editor's share, as the CSS defaults
-const setShare = f => {
-  share = Math.min(.85, Math.max(.15, f));
-  split.parentNode.style.setProperty('--a', share + 'fr');
-  split.parentNode.style.setProperty('--b', 1 - share + 'fr');
-  split.setAttribute('aria-valuenow', Math.round(share * 100));
-  store.set('split', share);
-};
-if (+store.get('split')) setShare(+store.get('split'));
-const orient = () => split.setAttribute('aria-orientation', stacked.matches ? 'horizontal' : 'vertical');
-stacked.onchange = orient; orient();
-split.onpointerdown = e => {
-  e.preventDefault(); // no text selection while dragging
-  split.setPointerCapture(e.pointerId);
-  split.classList.add('drag');
-  split.onpointermove = e => {
-    const a = editorPanel.getBoundingClientRect(), b = consolePanel.getBoundingClientRect();
-    setShare(stacked.matches ? (e.clientY - a.top) / (b.bottom - a.top) : (e.clientX - a.left) / (b.right - a.left));
+// Layout: a tree of splits, each leaf a panel ('editor', 'console', 'scope', 'fall'), each split
+// { dir: 'row' | 'col', f: the first half's share, a, b }. Drag a panel's title strip onto another
+// panel: near an edge splits that panel there, in the middle swaps the two. Kept in the browser.
+// Panels are moved, never rebuilt, so the editor, console and canvases keep their state.
+const main = document.querySelector('main'), drop = document.getElementById('drop');
+const panels = Object.fromEntries([...main.children].map(p => [p.dataset.panel, p]));
+// Narrow screens get a fixed stack (editor, console, then scope beside spectrum) with its own
+// resizable shares; panels move only on wide ones.
+const stacked = matchMedia('(max-width: 760px)');
+const WIDE = { dir: 'row', f: .5, a: 'editor', b: { dir: 'col', f: .72, a: 'console', b: { dir: 'row', f: .5, a: 'scope', b: 'fall' } } };
+const NARROW = { dir: 'col', f: .5, a: 'editor', b: { dir: 'col', f: .65, a: 'console', b: { dir: 'row', f: .5, a: 'scope', b: 'fall' } } };
+const leaves = n => typeof n === 'string' ? [n] : [...leaves(n.a), ...leaves(n.b)];
+function loadLayout(key, fallback) {
+  try {
+    const n = JSON.parse(store.get(key));
+    if (leaves(n).sort().join() === Object.keys(panels).sort().join()) return n;
+  } catch {} // missing or malformed
+  return structuredClone(fallback);
+}
+let layout = loadLayout('layout', WIDE);
+const narrow = loadLayout('layoutNarrow', NARROW);
+const tree = () => stacked.matches ? narrow : layout;
+const saveLayout = () => store.set(stacked.matches ? 'layoutNarrow' : 'layout', JSON.stringify(tree()));
+['split', 'scopeH'].forEach(store.del); // the old fixed splitters' settings
+const shown = n => typeof n === 'string' ? !panels[n].hidden : shown(n.a) || shown(n.b);
+const MIN = 72; // px each side of a splitter keeps: a panel's title strip and some of its screen
+// A split with one half hidden (the scope or spectrum toggled off) shows only the other half.
+function build(n) {
+  if (typeof n === 'string') return panels[n];
+  if (!shown(n.a)) return build(n.b);
+  if (!shown(n.b)) return build(n.a);
+  const vert = n.dir === 'col', el = document.createElement('div'), bar = document.createElement('div');
+  el.className = 'tile ' + (vert ? 'col' : 'row');
+  bar.className = 'split' + (vert ? ' row' : '');
+  bar.role = 'separator'; bar.tabIndex = 0; bar.ariaLabel = 'Resize panels';
+  bar.ariaOrientation = vert ? 'horizontal' : 'vertical'; bar.ariaValueMin = 5; bar.ariaValueMax = 95;
+  // Saved shares are only kept within .05-.95; dragging and the arrow keys keep MIN px each side.
+  const setF = (f, min = .05) => {
+    n.f = Math.min(1 - min, Math.max(min, f));
+    el.style.setProperty('--a', n.f + 'fr');
+    el.style.setProperty('--b', 1 - n.f + 'fr');
+    bar.ariaValueNow = Math.round(n.f * 100);
   };
-};
-split.onlostpointercapture = () => { split.onpointermove = null; split.classList.remove('drag'); };
-// The console/viz splitter sets the scope and spectrum screens' height (--viz-h on the column);
-// the console takes the rest.
-const scopeSplit = document.getElementById('scopeSplit'), vizCol = scopeSplit.parentNode, viz = scope.closest('.viz');
-const vizPanels = { showScope: scope.closest('.panel'), showFall: fall.closest('.panel') };
-const shownPanel = () => Object.values(vizPanels).find(p => !p.hidden);
-const setScopeH = px => {
-  const panel = shownPanel();
-  if (!panel) return;
-  const chrome = panel.offsetHeight - panel.querySelector('canvas').offsetHeight; // the panel's tag and padding
-  const max = vizCol.clientHeight - scopeSplit.offsetHeight - chrome - 100; // leave the console 100px
-  px = Math.round(Math.max(40, Math.min(max, px)));
-  vizCol.style.setProperty('--viz-h', px + 'px');
-  scopeSplit.setAttribute('aria-valuenow', px);
-};
-const vizH = () => shownPanel()?.querySelector('canvas').offsetHeight;
-// Saved only when the user sets it, so a small window clamps the height without losing the choice.
-const saveScopeH = () => vizH() && store.set('scopeH', vizH());
-const loadScopeH = () => +store.get('scopeH') && setScopeH(+store.get('scopeH'));
-// Header buttons show or hide each panel; with both hidden the console takes the whole column.
+  setF(+n.f || .5);
+  const thick = () => vert ? bar.offsetHeight : bar.offsetWidth; // the bar's thickness, across the split
+  const minF = () => Math.min(.5, MIN / ((vert ? el.clientHeight : el.clientWidth) - thick()));
+  bar.onpointerdown = e => {
+    e.preventDefault(); // no text selection while dragging
+    bar.setPointerCapture(e.pointerId);
+    bar.classList.add('drag');
+    const r = el.getBoundingClientRect(), gap = thick() / 2;
+    bar.onpointermove = e => setF(vert ? (e.clientY - r.top - gap) / (r.height - 2 * gap) : (e.clientX - r.left - gap) / (r.width - 2 * gap), minF());
+  };
+  bar.onlostpointercapture = () => { bar.onpointermove = null; bar.classList.remove('drag'); saveLayout(); };
+  bar.onkeydown = e => {
+    const d = { ArrowLeft: -.05, ArrowUp: -.05, ArrowRight: .05, ArrowDown: .05 }[e.key];
+    if (d) { e.preventDefault(); setF(n.f + d, minF()); saveLayout(); }
+  };
+  el.append(build(n.a), bar, build(n.b));
+  return el;
+}
+// Moving a node out of the page resets its scroll and drops focus; put both back.
+function render() {
+  const scrolls = [editor.scrollDOM, log].map(e => [e, e.scrollTop]), focused = document.activeElement;
+  main.replaceChildren(build(tree()));
+  scrolls.forEach(([e, t]) => e.scrollTop = t);
+  if (focused !== document.activeElement) focused?.focus({ preventScroll: true });
+}
+stacked.onchange = render;
+// The tree without leaf id: its split collapses into the sibling.
+function without(n, id) {
+  if (typeof n === 'string') return n === id ? null : n;
+  const a = without(n.a, id), b = without(n.b, id);
+  return a && b ? { ...n, a, b } : a || b;
+}
+const mapLeaves = (n, f) => typeof n === 'string' ? f(n) : { ...n, a: mapLeaves(n.a, f), b: mapLeaves(n.b, f) };
+function movePanel(id, target, zone) {
+  if (zone === 'swap') layout = mapLeaves(layout, s => s === id ? target : s === target ? id : s);
+  else layout = mapLeaves(without(layout, id), s => s !== target ? s : {
+    dir: zone === 'top' || zone === 'bottom' ? 'col' : 'row', f: .5,
+    a: zone === 'left' || zone === 'top' ? id : target, b: zone === 'left' || zone === 'top' ? target : id,
+  });
+  saveLayout();
+  render();
+}
+// Where a drop at (x, y) lands on rect r: the middle third swaps, else the nearest edge's half.
+function dropZone(r, x, y) {
+  const u = (x - r.left) / r.width, v = (y - r.top) / r.height;
+  if (Math.abs(u - .5) < 1 / 6 && Math.abs(v - .5) < 1 / 6) return ['swap', r];
+  const d = { top: v, bottom: 1 - v, left: u, right: 1 - u };
+  const zone = Object.keys(d).reduce((m, k) => d[k] < d[m] ? k : m);
+  const half = { left: [0, 0, .5, 1], right: [.5, 0, .5, 1], top: [0, 0, 1, .5], bottom: [0, .5, 1, .5] }[zone];
+  return [zone, { left: r.left + half[0] * r.width, top: r.top + half[1] * r.height, width: half[2] * r.width, height: half[3] * r.height }];
+}
+for (const [id, p] of Object.entries(panels)) {
+  const tag = p.querySelector('.tag');
+  tag.title = 'Drag to move this panel';
+  tag.onpointerdown = e => {
+    if (e.button || e.target.closest('button') || stacked.matches) return;
+    e.preventDefault();
+    tag.setPointerCapture(e.pointerId);
+    const x0 = e.clientX, y0 = e.clientY;
+    let moving = false, target = null, zone;
+    tag.onpointermove = e => {
+      if (!moving && Math.hypot(e.clientX - x0, e.clientY - y0) < 5) return; // a click is not a drag
+      moving = true;
+      p.classList.add('dragging');
+      target = Object.keys(panels).find(k => {
+        if (k === id || panels[k].hidden) return false;
+        const r = panels[k].getBoundingClientRect();
+        return e.clientX >= r.left && e.clientX < r.right && e.clientY >= r.top && e.clientY < r.bottom;
+      });
+      drop.hidden = !target;
+      if (!target) return;
+      let r;
+      [zone, r] = dropZone(panels[target].getBoundingClientRect(), e.clientX, e.clientY);
+      Object.assign(drop.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px' });
+    };
+    tag.onlostpointercapture = () => {
+      tag.onpointermove = null;
+      p.classList.remove('dragging');
+      drop.hidden = true;
+      if (target) movePanel(id, target, zone);
+    };
+  };
+}
+// Header buttons show or hide the scope and spectrum; a hidden panel keeps its place in the layout.
+const vizPanels = { showScope: panels.scope, showFall: panels.fall };
 const setViz = (id, on) => {
   vizPanels[id].hidden = !on;
   document.getElementById(id).setAttribute('aria-pressed', on);
-  viz.hidden = scopeSplit.hidden = !shownPanel();
   store.set(id, on ? 1 : 0);
-  loadScopeH(); // the clamp depends on the shown panel
+  render();
+  wire();
 };
 for (const id in vizPanels) {
   setViz(id, store.get(id) !== '0');
   document.getElementById(id).onclick = () => setViz(id, vizPanels[id].hidden);
 }
-new ResizeObserver(loadScopeH).observe(vizCol); // the window or the other splitter resizing the column
-scopeSplit.onpointerdown = e => {
-  e.preventDefault();
-  scopeSplit.setPointerCapture(e.pointerId);
-  scopeSplit.classList.add('drag');
-  const panel = shownPanel(), chrome = panel.offsetHeight - panel.querySelector('canvas').offsetHeight;
-  scopeSplit.onpointermove = e => setScopeH(panel.getBoundingClientRect().bottom - e.clientY - scopeSplit.offsetHeight / 2 - chrome);
-};
-scopeSplit.onlostpointercapture = () => { scopeSplit.onpointermove = null; scopeSplit.classList.remove('drag'); saveScopeH(); };
-scopeSplit.onkeydown = e => {
-  const d = { ArrowUp: 20, ArrowDown: -20 }[e.key];
-  if (d) { e.preventDefault(); setScopeH(vizH() + d); saveScopeH(); }
-};
-split.onkeydown = e => {
-  const d = { ArrowLeft: -.05, ArrowUp: -.05, ArrowRight: .05, ArrowDown: .05 }[e.key];
-  if (d) { e.preventDefault(); setShare(share + d); }
-};
 
 const aboutDialog = document.getElementById('aboutDialog');
 document.getElementById('about').onclick = () => aboutDialog.showModal();

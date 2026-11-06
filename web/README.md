@@ -247,7 +247,7 @@ edit saves the file. New and the two example files (`sapf-examples.txt`, `sapf-b
 `npm run build` copies into `build/`) open an unsaved text; leaving it once edited asks first.
 
 Hovering a word shows its documentation; completion offers built-ins and prelude functions.
-With "Replace sound" checked (the default), evaluating code that calls `play` or `record` stops the
+With "Solo" on (the default), evaluating code that calls `play` or `record` stops the
 current sound first, so there's no need for Cmd/Ctrl+. between takes. It looks for those words in the
 evaluated text only, so calling a function that plays (`\[... play] = f`, then `f`) doesn't replace.
 
