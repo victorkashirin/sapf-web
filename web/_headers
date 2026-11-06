@@ -1,4 +1,6 @@
 # SharedArrayBuffer (pthreads, Wasm Audio Worklet) needs cross-origin isolation; web/serve.py sends the same headers.
+# no-cache: revalidate every load (a cheap ETag check), so a new deploy reaches browsers on their next reload.
 /*
   Cross-Origin-Opener-Policy: same-origin
   Cross-Origin-Embedder-Policy: require-corp
+  Cache-Control: no-cache
