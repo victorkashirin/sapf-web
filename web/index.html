@@ -417,7 +417,7 @@ function onSapfOpen(path) {
 const clamp01 = v => v > 0 ? Math.min(1, v) : 0; // NaN (0-sized window) -> 0
 sapfReady.then(m => addEventListener('pointermove', e =>
   m._sapf_set_mouse(clamp01(e.clientX / innerWidth), clamp01(1 - e.clientY / innerHeight))))
-  .catch(() => {}); // a failed load surfaces where boot() awaits it
+  .catch(() => {}); // a failed load surfaces where run() awaits it
 
 // Sound bank: files in /sounds in sapf's file system, which is the working directory, so
 // `"blip.wav" sf>` reads one. Built-in sounds come from web/sounds; uploads are kept in IndexedDB
@@ -442,7 +442,7 @@ function putSound(m, name, data) {
   m.FS.writeFile(`${SOUNDS}/${name}`, data);
   try { soundChannels.set(name, channelsOf(data)); } catch { soundChannels.delete(name); } // truncated header
 }
-// Never leaves the promise pending: boot() waits on the sound bank, so a hang would stop Run for good.
+// Never leaves the promise pending: run() waits on the sound bank, so a hang would stop Run for good.
 const idb = (mode, f) => new Promise((ok, fail) => {
   const open = indexedDB.open('sapf-web', 1);
   open.onupgradeneeded = () => open.result.createObjectStore('sounds', { keyPath: 'name' });
@@ -515,9 +515,13 @@ async function deleteSound(name) {
   if (BUILTIN.includes(name)) await addBuiltin(m, name); // an upload had replaced it
 }
 
-async function boot() {
-  if (ctx) return;
-  sapf = await soundsReady;
+// iOS starts audio only from inside a tap or key press, synchronously: after an await the gesture
+// no longer counts and the context stays suspended. So the module is kept once loaded, and run()
+// starts and resumes audio before its first await.
+let loaded;
+soundsReady.then(m => loaded = m, () => {});
+function startAudio(m) {
+  sapf = m;
   sapf.onSapfSlider = onSapfSlider;
   sapf.onSapfOpen = onSapfOpen;
   // An absolute path: the working directory is /sounds.
@@ -701,11 +705,17 @@ function drawFall(dt) {
 
 
 async function run(src) {
-  await boot();
-  await ctx.resume();
+  if (!ctx && loaded) startAudio(loaded);
+  ctx?.resume(); // not awaited: an await before it would leave the gesture
+  if (!ctx) { const m = await soundsReady; if (!ctx) startAudio(m); } // Run before the module loaded: the unlock below resumes it
   print('> ' + src.trim(), 'in');
   sapf.ccall('sapf_eval', null, ['string'], [src + '\n']);
 }
+
+// A context started or resumed outside a gesture stays suspended on iOS (and goes 'interrupted' after
+// a call or the app being backgrounded); any later tap or key press starts it.
+for (const t of ['touchend', 'click', 'keydown'])
+  addEventListener(t, () => ctx && ctx.state !== 'running' && ctx.resume(), true);
 
 // Evaluating code that plays stops the current sound first, when "Solo" is on.
 const replace = document.getElementById('replace');
