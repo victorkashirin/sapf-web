@@ -163,7 +163,7 @@
   .split.row::before { width: 32px; height: 7px; background: repeating-linear-gradient(#000b 0 1px, #ffffff18 1px 2px, transparent 2px 3px); }
   .split.row:hover::before, .split.row.drag::before { background: repeating-linear-gradient(#000b 0 1px, #ffb45466 1px 2px, transparent 2px 3px); }
   /* flex-basis 0: the canvas fills its panel, never sized by its own pixel buffer */
-  canvas.screen { display: block; flex: 1 1 0; cursor: move; touch-action: none; width: 100%;
+  canvas.screen { display: block; flex: 1 1 0; width: 100%;
     background: repeating-linear-gradient(0deg, #00000038 0 1px, transparent 1px 3px), radial-gradient(ellipse at center, #0e1611, #070a08 85%); }
   #log .in { color: var(--amber); text-shadow: 0 0 5px #ffb45444; }
   #log .err { color: var(--red); text-shadow: 0 0 5px #ff7b7244; }
@@ -273,8 +273,8 @@
 <main>
   <section class="panel" data-panel="editor"><div class="tag">editor <span id="fileLabel"></span><span id="runs"><button data-run="line" title="Run the selection or the line (Mod+Enter)">Line</button><button data-run="block" title="Run the selection or the ( ) block around the cursor (Shift+Enter)">Block</button><button data-run="paragraph" title="Run the selection or the paragraph (Mod+Shift+Enter)">Para</button></span><button class="icon cog" title="Settings" aria-label="Editor settings" aria-expanded="false"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"/><circle cx="8" cy="8" r="4.3"/></svg></button></div><div class="settings" hidden><label><span>theme</span><select id="theme"><option value="amber">amber</option><option value="phosphor">phosphor</option><option value="contrast">high contrast</option><option value="plain">plain</option></select></label></div><div class="screen" id="code"></div></section>
   <section class="panel" data-panel="console"><div class="tag">console <button id="clearLog" title="Clear console (Mod+K)">Clear</button><button class="icon cog" title="Settings" aria-label="Console settings" aria-expanded="false"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"/><circle cx="8" cy="8" r="4.3"/></svg></button></div><div class="settings" hidden></div><div id="controls"></div><pre class="screen" id="log"></pre></section>
-  <section class="panel" data-panel="scope"><div class="tag">scope<button class="icon cog" title="Settings" aria-label="Scope settings" aria-expanded="false"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"/><circle cx="8" cy="8" r="4.3"/></svg></button></div><div class="settings" hidden></div><canvas class="screen" id="scope" role="img" aria-label="Oscilloscope of the output" title="Drag sideways for the time shown, up or down for the gain"></canvas></section>
-  <section class="panel" data-panel="fall"><div class="tag">spectrum<button class="icon cog" title="Settings" aria-label="Spectrum settings" aria-expanded="false"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"/><circle cx="8" cy="8" r="4.3"/></svg></button></div><div class="settings" hidden></div><canvas class="screen" id="fall" role="img" aria-label="Spectrogram of the output" title="Drag sideways for the time shown, up or down for the brightness"></canvas></section>
+  <section class="panel" data-panel="scope"><div class="tag">scope<button class="icon cog" title="Settings" aria-label="Scope settings" aria-expanded="false"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"/><circle cx="8" cy="8" r="4.3"/></svg></button></div><div class="settings" hidden></div><canvas class="screen" id="scope" role="img" aria-label="Oscilloscope of the output"></canvas></section>
+  <section class="panel" data-panel="fall"><div class="tag">spectrum<button class="icon cog" title="Settings" aria-label="Spectrum settings" aria-expanded="false"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"/><circle cx="8" cy="8" r="4.3"/></svg></button></div><div class="settings" hidden></div><canvas class="screen" id="fall" role="img" aria-label="Spectrogram of the output"></canvas></section>
 </main>
 <div id="drop" hidden></div>
 <script type="text/plain" id="example">; Welcome to SAPF (Sound As Pure Form), a stack language for sound.
@@ -552,54 +552,27 @@ for (let i = 0; i < 256; i++) {
   for (let c = 1; c < 4; c++) lut[i * 3 + c - 1] = a[c] + f * (b[c] - a[c]);
 }
 let analyser, waveAn, waveWin, hist, waveT = 0, spec, col, rowMax, last, acc = 0;
-// Dragging over a panel sets, sideways, the time it shows (right = longer): the waveform's width in
-// ms, following the cube of the drag across its whole range in 800px (doubling per step would crawl
-// at short spans and race at long ones), and the waterfall's history in seconds, doubling per 80px;
-// and up or down its level (up = more): the waveform's gain, doubling per 80px, and the waterfall's boost in dB, 12 per
-// 80px, which lifts quiet partials into the colours (and pushes loud ones to white).
-// The same four are sliders in the panels' settings. All kept in the browser.
+// Each panel's time span and level, set in its settings and kept in the browser: the waveform's
+// width in ms and its gain; the waterfall's history in seconds and its boost in dB, which lifts quiet
+// partials into the colours (and pushes loud ones to white).
 const SPAN = [[1, 2000], [1, 60]], LEVEL = [[1 / 8, 64], [-30, 60]];
 const spans = [20, 10], levels = [1, 0], KEYS = [['scopeMs', 'scopeGain'], ['fallSec', 'fallDb']];
-let hint = { side: 0, until: 0 }; // which panel shows its settings, and until when
 const clampTo = ([lo, hi], v) => Math.max(lo, Math.min(hi, v));
-const vizSync = []; // per side: refreshes its settings' sliders
 // Sets a panel's span and level, rounded as shown, and keeps them.
 function tune(side, s, l) {
   s = clampTo(SPAN[side], s);
   spans[side] = +s.toPrecision(s < 10 ? 2 : 3);
   levels[side] = side ? Math.round(clampTo(LEVEL[1], l)) : +clampTo(LEVEL[0], l).toPrecision(2);
   KEYS[side].forEach((k, i) => store.set(k, [spans, levels][i][side]));
-  vizSync[side]?.();
 }
 const vizText = side => [side ? `${spans[1]} s` : spans[0] >= 1000 ? `${spans[0] / 1000} s` : `${spans[0]} ms`,
   side ? `${levels[1] > 0 ? '+' : ''}${levels[1]} dB` : `×${levels[0]}`];
-[scope, fall].forEach((c, side) => {
-  c.onpointerdown = e => {
-    const x0 = e.clientX, y0 = e.clientY, s0 = spans[side], l0 = levels[side];
-    c.setPointerCapture(e.pointerId);
-    hint = { side, until: Infinity };
-    c.onpointermove = e => {
-      const dx = e.clientX - x0, top = SPAN[side][1], up = (y0 - e.clientY) / 80;
-      tune(side, side ? s0 * 2 ** (dx / 80) : top * clampTo([0, 1], Math.cbrt(s0 / top) + dx / 800) ** 3,
-        side ? l0 + up * 12 : l0 * 2 ** up);
-    };
-  };
-  c.onlostpointercapture = () => { c.onpointermove = null; hint.until = performance.now() + 800; };
-});
 // Sizes a canvas's pixels to its box; false when it has no room (hidden or collapsed).
 function fit(c) {
   const W = c.clientWidth * devicePixelRatio | 0, H = c.clientHeight * devicePixelRatio | 0;
   if (W < 8 || H < 8) return false;
   if (c.width !== W || c.height !== H) { c.width = W; c.height = H; }
   return true;
-}
-function drawSpan(g, side, now) {
-  if (hint.side !== side || now >= hint.until) return;
-  const pad = 8 * devicePixelRatio;
-  g.font = `${11 * devicePixelRatio}px ${getComputedStyle(scope).fontFamily}`;
-  g.fillStyle = '#ffb454'; g.textAlign = 'right'; g.textBaseline = 'top'; g.shadowColor = '#000'; g.shadowBlur = 3 * devicePixelRatio;
-  g.fillText(vizText(side).join('  '), g.canvas.width - pad, pad);
-  g.shadowBlur = 0;
 }
 // Only shown panels are fed and drawn: a hidden one's analyser is disconnected and its history
 // dropped, so it comes back empty, and with both hidden the frame loop stops.
@@ -622,8 +595,8 @@ function drawViz(now) {
   if (!vizLoop) return;
   requestAnimationFrame(drawViz);
   const dt = Math.min(250, now - (last ?? now)); last = now; // capped: a hidden tab's stall adds no burst of columns
-  if (fit(scope)) drawWave(now);
-  if (fit(fall)) drawFall(now, dt);
+  if (fit(scope)) drawWave();
+  if (fit(fall)) drawFall(dt);
 }
 // The newest `span` samples centred on a rising zero crossing (searching back), as a digital scope
 // puts its trigger mid-screen with what came before it on the left; drawn as each pixel column's
@@ -634,7 +607,7 @@ function drawViz(now) {
 // samples played since the last one (by the audio clock) from the analyser's window.
 // shortcut: the clock and the analyser can disagree by a 128-sample block, a seam too small to see at
 // the spans that use hist; tap the samples in an AudioWorklet if it ever shows.
-function drawWave(now) {
+function drawWave() {
   const W = scope.width, H = scope.height, pad = 4 * devicePixelRatio | 0, sw = W - 2 * pad;
   const sr = ctx.sampleRate, m = waveAn.fftSize;
   waveWin ??= new Float32Array(m);
@@ -675,11 +648,10 @@ function drawWave(now) {
   sg.lineWidth = 6 * devicePixelRatio; sg.globalAlpha = .12; sg.stroke();
   sg.lineWidth = 1.5 * devicePixelRatio; sg.globalAlpha = 1; sg.shadowColor = '#7ee787'; sg.shadowBlur = 8 * devicePixelRatio; sg.stroke();
   sg.shadowBlur = 0;
-  drawSpan(sg, 0, now);
 }
 // Each frame folds the spectrum into rowMax (the loudest bin per pixel row, the loudest frame
 // since the last column), and w / spans[1] columns a second scroll in at the right.
-function drawFall(now, dt) {
+function drawFall(dt) {
   const w = fall.width, h = fall.height;
   if (wf.width !== w || wf.height !== h) { // a new canvas, as resizing one clears it
     const old = wf;
@@ -716,7 +688,6 @@ function drawFall(now, dt) {
   }
   fg.clearRect(0, 0, w, h);
   fg.drawImage(wf, 0, 0);
-  drawSpan(fg, 1, now);
 }
 
 
@@ -1064,7 +1035,6 @@ function knob(box, name, get, set, [to, from], show) {
   input.oninput = () => { set(to(+input.value)); sync(); };
   sync();
   box.append(row);
-  return sync;
 }
 const lin = ([lo, hi]) => [p => lo + p * (hi - lo), v => (v - lo) / (hi - lo)];
 const expo = ([lo, hi]) => [p => lo * (hi / lo) ** p, v => Math.log(v / lo) / Math.log(hi / lo)];
@@ -1089,12 +1059,12 @@ KEYS.forEach(([sk, lk], i) => {
   const l = parseFloat(store.get(lk)); // a level can be 0 or negative, so not `||`
   if (isFinite(l)) levels[i] = clampTo(LEVEL[i], l);
 });
-// The scope's span follows the cube of the slider, as its drag does; the rest double per step.
+// The scope's span follows the cube of the slider (doubling per step would crawl at short spans and
+// race at long ones); the rest double, or add dB, evenly per step.
 const cube = [p => SPAN[0][1] * p ** 3, v => Math.cbrt(v / SPAN[0][1])];
 [[scopeBox, cube, expo(LEVEL[0]), 'gain'], [fallBox, expo(SPAN[1]), lin(LEVEL[1]), 'boost']].forEach(([box, sMap, lMap, lName], side) => {
-  const a = knob(box, 'time', () => spans[side], v => tune(side, v, levels[side]), sMap, () => vizText(side)[0]);
-  const b = knob(box, lName, () => levels[side], v => tune(side, spans[side], v), lMap, () => vizText(side)[1]);
-  vizSync[side] = () => { a(); b(); };
+  knob(box, 'time', () => spans[side], v => tune(side, v, levels[side]), sMap, () => vizText(side)[0]);
+  knob(box, lName, () => levels[side], v => tune(side, spans[side], v), lMap, () => vizText(side)[1]);
 });
 
 const aboutDialog = document.getElementById('aboutDialog');
