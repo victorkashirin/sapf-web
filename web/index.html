@@ -30,8 +30,10 @@
     background-color: #1a1c1f;
   }
   header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px 16px 2px; }
-  .brand { font-weight: 700; font-size: 15px; letter-spacing: .12em; color: #e6e8eb; margin-right: 8px; }
-  .brand small { font-weight: 400; font-size: 10px; color: var(--dim); letter-spacing: .2em; margin-left: 4px; }
+  .brand { display: inline-flex; margin-right: 8px; }
+  /* the logo is stamped into the metal, lit from above: #deboss darkens each letter's top walls and lights its
+     bottom walls, straight up and down so nothing reads as a cast shadow. In a darkened Stop red. */
+  .logo { height: 30px; width: auto; fill: color-mix(in srgb, var(--red) 55%, #000); }
   .gh { display: inline-flex; align-items: center; gap: 6px; color: var(--dim); text-decoration: none; font-size: 12px; }
   .gh:hover { color: var(--text); }
   #about { margin-left: auto; }
@@ -217,10 +219,10 @@
     #stop, #addSlider, .led, #about { order: 2; }
     #stop, #addSlider { flex: 1 1 auto; max-width: 10em; white-space: nowrap; }
   }
-  @media (max-width: 360px) { #runs button { padding: 6px 9px; } .brand small { display: none; } } /* 320px phones: one strip, two header rows */
+  @media (max-width: 360px) { #runs button { padding: 6px 9px; } } /* 320px phones: one strip, two header rows */
 </style>
 <header>
-  <span class="brand">sapf<small>web</small></span>
+  <span class="brand"><svg class="logo" viewBox="0 0 63 63" role="img" aria-label="sapf"><filter id="deboss" x="-5%" y="-5%" width="110%" height="110%"><feComponentTransfer in="SourceAlpha" result="out"><feFuncA type="table" tableValues="1 0"/></feComponentTransfer><feOffset in="out" dy="1.6" result="d"/><feComposite in="d" in2="SourceAlpha" operator="in" result="top"/><feColorMatrix in="top" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .8 0" result="dark"/><feOffset in="out" dy="-1.2" result="u"/><feComposite in="u" in2="SourceAlpha" operator="in" result="bot"/><feColorMatrix in="bot" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .22 0" result="light"/><feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="dark"/><feMergeNode in="light"/></feMerge></filter><path filter="url(#deboss)" fill-rule="evenodd" d="M0 0 30 0 30 6 22 6 22 12 30 12 30 30 0 30 0 24 8 24 8 18 0 18ZM36 0 63 0 63 30 52 30 52 18 44 18 44 30 33 30 33 6 36 6ZM44 6 44 12 52 12 52 6ZM0 33 30 33 30 51 22 51 22 63 0 63ZM33 33 63 33 63 39 55 39 55 45 63 45 63 51 55 51 55 63 33 63ZM11 39 11 45 19 45 19 39Z"/></svg></span>
   <details class="menu" id="fileMenu">
     <summary class="btn">File</summary>
     <div class="pop">
