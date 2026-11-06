@@ -39,6 +39,9 @@
   dialog > div { padding: 10px 18px 16px; line-height: 1.55; }
   dialog::backdrop { background: #000a; backdrop-filter: blur(2px); }
   dialog a { color: var(--amber); }
+  dialog .keys { border-spacing: 0; margin: 0 0 1em 4px; }
+  dialog .keys td { padding: 1px 0; }
+  dialog .keys td:first-child { color: var(--amber); padding-right: 16px; white-space: nowrap; }
   dialog .actions { text-align: right; margin-bottom: 0; }
 
   /* plastic keycaps */
@@ -160,7 +163,7 @@
   }
 </style>
 <header>
-  <span class="brand">sapf<small>wasm</small></span>
+  <span class="brand">sapf<small>web</small></span>
   <details class="menu" id="fileMenu">
     <summary class="btn">File</summary>
     <div class="pop">
@@ -192,11 +195,23 @@
 <dialog id="aboutDialog">
   <div>
     <div class="tag">about</div>
-    <p><b>sapf web</b> by Victor Kashirin: <a href="https://github.com/victorkashirin/sapf-web">github.com/victorkashirin/sapf-web</a></p>
+    <p><b>sapf web</b> by <a href="https://victorkashirin.com">Victor Kashirin</a>: <a href="https://github.com/victorkashirin/sapf-web">github.com/victorkashirin/sapf-web</a></p>
     <p>sapf (Sound As Pure Form) running in the browser via WebAssembly. A fork of
       <a href="https://github.com/ahihi/sapf">ahihi/sapf</a>, the cross-platform port of James McCartney's original
       <a href="https://github.com/lfnoise/sapf">lfnoise/sapf</a>.</p>
-    <p>Licensed under the <a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU GPL v3.0</a>, like sapf itself.</p>
+    <div class="tag">keys (Mod = Cmd/Ctrl)</div>
+    <table class="keys">
+      <tr><td>Mod+Enter</td><td>eval line / selection</td></tr>
+      <tr><td>Shift+Enter</td><td>eval ( ) block</td></tr>
+      <tr><td>Mod+Shift+Enter</td><td>eval paragraph</td></tr>
+      <tr><td>Esc, Mod+.</td><td>stop sound</td></tr>
+      <tr><td>Mod+Shift+.</td><td>clear stack</td></tr>
+      <tr><td>Mod+K</td><td>clear console</td></tr>
+      <tr><td>Shift+Alt+F</td><td>format</td></tr>
+      <tr><td>Ctrl+Space</td><td>complete (Mac: also Opt+` or Opt+I)</td></tr>
+      <tr><td>Mod+F</td><td>find / replace</td></tr>
+    </table>
+    <p>Licensed under the <a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU GPL v3.0</a>.</p>
     <p class="actions"><button id="aboutClose">Close</button></p>
   </div>
 </dialog>
