@@ -173,7 +173,7 @@
   @keyframes blink { 50% { opacity: 0; } }
 
   /* sliders: recessed track, plastic fader cap */
-  #controls { padding: 2px 4px 10px; }
+  #controls { padding: 2px 4px 10px; flex: none; max-height: 50%; overflow-y: auto; } /* many sliders scroll, the console keeps half */
   #controls:empty { display: none; }
   #controls label { display: grid; grid-template-columns: 7em 1fr 5em; gap: 10px; align-items: center; margin: 6px 0; }
   #controls span { color: var(--dim); overflow: hidden; text-overflow: ellipsis; }
@@ -209,6 +209,7 @@
     #stop, #addSlider, .led, #about { order: 2; }
     #stop, #addSlider { flex: 1 1 auto; max-width: 10em; white-space: nowrap; }
   }
+  @media (max-width: 360px) { #runs button { padding: 6px 9px; } .brand small { display: none; } } /* 320px phones: one strip, two header rows */
 </style>
 <header>
   <span class="brand">sapf<small>web</small></span>
@@ -753,7 +754,9 @@ showBuf();
 editor.focus();
 
 const fileMenu = document.getElementById('fileMenu'), fileName = document.getElementById('fileName');
-const closeMenu = () => { fileMenu.open = false; editor.focus(); };
+// Focus moves only with a fine pointer: on touch screens it pops the keyboard over what was just opened.
+const finePointer = matchMedia('(pointer: fine)'), focusIfFine = el => finePointer.matches && el.focus();
+const closeMenu = () => { fileMenu.open = false; focusIfFine(editor); };
 function openText(text, next) {
   if (buf.dirty && !confirm(`Discard the unsaved changes to "${buf.title}"?`)) return;
   buf = next;
@@ -828,7 +831,8 @@ fileMenu.ontoggle = () => {
     };
     list.append(row);
   }
-  fileName.focus();
+  fitPop(fileMenu);
+  focusIfFine(fileName);
 };
 const soundMenu = document.getElementById('soundMenu'), soundFile = document.getElementById('soundFile');
 async function listSounds() {
@@ -847,7 +851,7 @@ async function listSounds() {
     insert.onclick = () => {
       soundMenu.open = false;
       editor.dispatch(editor.state.replaceSelection(`"${name}" sf> `));
-      editor.focus();
+      focusIfFine(editor);
     };
     if (del) {
       del.title = `Delete "${name}"`;
@@ -858,13 +862,22 @@ async function listSounds() {
   }
   if (!list.children.length) list.innerHTML = '<div class="none">no sounds yet</div>';
 }
-soundMenu.ontoggle = () => soundMenu.open && listSounds();
+// A menu's popup stays 16px inside the window: on phones the Sounds one would run off the right edge.
+function fitPop(menu) {
+  const pop = menu.querySelector('.pop');
+  pop.style.left = '';
+  // clientWidth, not innerWidth: phones widen innerWidth to take in content that overflows, this popup too
+  const r = pop.getBoundingClientRect(), w = document.documentElement.clientWidth, left = Math.max(16, Math.min(r.left, w - 16 - r.width));
+  pop.style.left = left - menu.getBoundingClientRect().left + 'px';
+}
+soundMenu.ontoggle = () => soundMenu.open && (fitPop(soundMenu), listSounds());
 document.getElementById('upload').onclick = () => soundFile.click();
 soundFile.onchange = async () => { await addSounds([...soundFile.files]); soundFile.value = ''; listSounds(); };
 document.addEventListener('click', e => {
   for (const menu of [fileMenu, soundMenu]) if (menu.open && !menu.contains(e.target)) menu.open = false;
 });
-fileMenu.onkeydown = e => e.key === 'Escape' && closeMenu();
+// Esc means a keyboard, so the editor gets focus back even on touch screens.
+fileMenu.onkeydown = e => { if (e.key === 'Escape') { fileMenu.open = false; editor.focus(); } };
 soundMenu.onkeydown = e => { if (e.key === 'Escape') { soundMenu.open = false; editor.focus(); } };
 const picks = { line: lineAt, block: blockAt, paragraph: paragraphAt };
 for (const b of document.querySelectorAll('#runs button')) {
@@ -902,10 +915,18 @@ function loadLayout(key, fallback) {
 let layout = loadLayout('layout', WIDE);
 const narrow = loadLayout('layoutNarrow', NARROW);
 const tree = () => stacked.matches ? narrow : layout;
-const saveLayout = () => store.set(stacked.matches ? 'layoutNarrow' : 'layout', JSON.stringify(tree()));
+// Both trees: a drag that outlives a switch between them (the window crossing 760px) still saves the one it changed.
+const saveLayout = () => { store.set('layout', JSON.stringify(layout)); store.set('layoutNarrow', JSON.stringify(narrow)); };
 ['split', 'scopeH'].forEach(store.del); // the old fixed splitters' settings
 const shown = n => typeof n === 'string' ? !panels[n].hidden : shown(n.a) || shown(n.b);
-const MIN = 72; // px each side of a splitter keeps: a panel's title strip and some of its screen
+const MIN = 72, BAR = 14; // px a panel keeps (its title strip and some screen); a splitter's thickness (.tile's 14px)
+// The px a subtree needs along a split's axis: panels in line add up with their splitters, panels across take the most.
+const need = (n, vert) => typeof n === 'string' ? (panels[n].hidden ? 0 : MIN) :
+  !shown(n.a) ? need(n.b, vert) : !shown(n.b) ? need(n.a, vert) :
+  (n.dir === 'col') === vert ? need(n.a, vert) + BAR + need(n.b, vert) : Math.max(need(n.a, vert), need(n.b, vert));
+// Each tile shows its share clamped to what fits its size now, so a share saved in a bigger window (or
+// a smaller one) never squeezes a panel under its title strip; the share itself is kept as dragged.
+const fitTiles = new ResizeObserver(es => es.forEach(e => e.target.show()));
 // A split with one half hidden (the scope or spectrum toggled off) shows only the other half.
 function build(n) {
   if (typeof n === 'string') return panels[n];
@@ -916,27 +937,39 @@ function build(n) {
   bar.className = 'split' + (vert ? ' row' : '');
   bar.role = 'separator'; bar.tabIndex = 0; bar.ariaLabel = 'Resize panels';
   bar.ariaOrientation = vert ? 'horizontal' : 'vertical'; bar.ariaValueMin = 5; bar.ariaValueMax = 95;
-  // Saved shares are only kept within .05-.95; dragging and the arrow keys keep MIN px each side.
-  const setF = (f, min = .05) => {
-    n.f = Math.min(1 - min, Math.max(min, f));
-    el.style.setProperty('--a', n.f + 'fr');
-    el.style.setProperty('--b', 1 - n.f + 'fr');
-    bar.ariaValueNow = Math.round(n.f * 100);
+  // [lo, hi]: the shares that leave each side what it needs; with too little room, split in proportion.
+  const bounds = () => {
+    const room = (vert ? el.clientHeight : el.clientWidth) - BAR, a = need(n.a, vert), b = need(n.b, vert);
+    if (room <= 0) return [0, 1]; // not laid out yet
+    return a + b <= room ? [a / room, 1 - b / room] : [a / (a + b), a / (a + b)];
   };
-  setF(+n.f || .5);
-  const thick = () => vert ? bar.offsetHeight : bar.offsetWidth; // the bar's thickness, across the split
-  const minF = () => Math.min(.5, MIN / ((vert ? el.clientHeight : el.clientWidth) - thick()));
+  el.show = () => {
+    const [lo, hi] = bounds(), f = el.f = Math.min(hi, Math.max(lo, n.f)); // el.f: the share shown
+    el.style.setProperty('--a', f + 'fr');
+    el.style.setProperty('--b', 1 - f + 'fr');
+    bar.ariaValueNow = Math.round(f * 100);
+  };
+  // Saved shares are kept within .05-.95, and dragging or the arrow keys within what fits now.
+  const setF = f => {
+    const [lo, hi] = bounds();
+    n.f = Math.min(.95, hi, Math.max(.05, lo, f));
+    el.show();
+  };
+  n.f = Math.min(.95, Math.max(.05, +n.f || .5));
+  el.show();
+  fitTiles.observe(el);
   bar.onpointerdown = e => {
+    if (e.button) return;
     e.preventDefault(); // no text selection while dragging
     bar.setPointerCapture(e.pointerId);
     bar.classList.add('drag');
-    const r = el.getBoundingClientRect(), gap = thick() / 2;
-    bar.onpointermove = e => setF(vert ? (e.clientY - r.top - gap) / (r.height - 2 * gap) : (e.clientX - r.left - gap) / (r.width - 2 * gap), minF());
+    const r = el.getBoundingClientRect(), gap = BAR / 2;
+    bar.onpointermove = e => setF(vert ? (e.clientY - r.top - gap) / (r.height - BAR) : (e.clientX - r.left - gap) / (r.width - BAR));
   };
   bar.onlostpointercapture = () => { bar.onpointermove = null; bar.classList.remove('drag'); saveLayout(); };
   bar.onkeydown = e => {
     const d = { ArrowLeft: -.05, ArrowUp: -.05, ArrowRight: .05, ArrowDown: .05 }[e.key];
-    if (d) { e.preventDefault(); setF(n.f + d, minF()); saveLayout(); }
+    if (d) { e.preventDefault(); setF(el.f + d); saveLayout(); } // from the share shown, which may be clamped
   };
   el.append(build(n.a), bar, build(n.b));
   return el;
@@ -944,7 +977,9 @@ function build(n) {
 // Moving a node out of the page resets its scroll and drops focus; put both back.
 function render() {
   const scrolls = [editor.scrollDOM, log].map(e => [e, e.scrollTop]), focused = document.activeElement;
+  fitTiles.disconnect();
   main.replaceChildren(build(tree()));
+  for (const p of Object.values(panels)) p.querySelector('.tag').title = stacked.matches ? '' : 'Drag to move this panel';
   scrolls.forEach(([e, t]) => e.scrollTop = t);
   if (focused !== document.activeElement) focused?.focus({ preventScroll: true });
 }
@@ -976,7 +1011,6 @@ function dropZone(r, x, y) {
 }
 for (const [id, p] of Object.entries(panels)) {
   const tag = p.querySelector('.tag');
-  tag.title = 'Drag to move this panel';
   tag.onpointerdown = e => {
     if (e.button || e.target.closest('button') || stacked.matches) return;
     e.preventDefault();
@@ -1082,7 +1116,7 @@ document.getElementById('addSlider').onclick = () => {
   const line = `\\["ctl${n}" 0 1 .5 slider] = ctl${n}  ctl${n} pop`;
   const at = editor.state.doc.lineAt(editor.state.selection.main.head).from;
   editor.dispatch({ changes: { from: at, insert: line + '\n' }, selection: { anchor: at + line.length } });
-  editor.focus();
+  focusIfFine(editor);
   run(line);
 };
 </script>
