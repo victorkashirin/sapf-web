@@ -1,6 +1,12 @@
 <!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+  // iOS zooms in on a focused field under 16px. maximum-scale=1 stops that, and iOS still allows
+  // pinch zoom; Android would block pinch zoom, so iOS only (iPadOS reports MacIntel).
+  if (/iP(hone|ad|od)/.test(navigator.platform) || navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    document.querySelector('meta[name=viewport]').content += ', maximum-scale=1';
+</script>
 <meta name="color-scheme" content="dark">
 <title>sapf web</title>
 <link rel="icon" href="favicon.png">
