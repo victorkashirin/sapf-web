@@ -247,7 +247,37 @@
   </div>
   </div>
 </main>
-<script type="text/plain" id="example">(1 0 impulse .3 decay) (.2 2X white) *  (1/20 0 sinosc 1m .2 bilin) .2 2 combn play
+<script type="text/plain" id="example">; Welcome to SAPF (Sound As Pure Form), a stack language for sound.
+; Put the cursor on a line and press Mod+Enter (Cmd/Ctrl+Enter) to run it.
+; Esc stops the sound. Hover any word to read its docs.
+
+; --- help ---
+helpall               ; every word, with its docs, in the console
+`sinosc help          ; one word (note the backquote)
+
+; --- the stack: words take their inputs from it and leave results on it ---
+1 2 +                 ; the console shows the stack: 3
+[1 2 3] 10 *          ; math works on whole lists
+clear                 ; empty the stack (or Mod+Shift+.)
+
+; --- sound ---
+800 0 sinosc .2 * play          ; a sine at 800 Hz, phase 0, amplitude .2
+[300 301] 0 saw .05 * play      ; a list makes stereo; the sides beat at 1 Hz
+
+; Mod+Shift+Enter runs this whole paragraph; Shift+Enter runs the innermost ( ) around the cursor
+(
+  (1 0 impulse .3 decay) (.2 2X white) *    ; a noise burst each second
+  (1/20 0 sinosc 1m .2 bilin)               ; delay time sweeping 1 ms to .2 s
+  .2 2 combn                                ; comb filter: max delay .2 s, decay 2 s
+  play
+)
+
+; a sound file; add your own with the Sounds menu
+"blip.wav" sf> play
+
+stop                  ; stop all sound (or Esc, Mod+.)
+
+; more to try: File > Examples
 </script>
 <script type="module">
 
