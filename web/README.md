@@ -57,8 +57,9 @@ What works:
   Each use reads the same slider afresh. Storing the signal (`... xslider = f`) works inside one
   expression, but `f` keeps everything the slider ever produced in memory, and playing `f` again
   later replays old slider moves before it catches up. The "Add control" button inserts such a
-  definition (`\["ctl1" 0 1 .5 slider] = ctl1`) on a new line above the cursor's line and runs it,
-  so `ctl1` can be used right away.
+  definition (`\["ctl1" 0 1 .5 slider] = ctl1  ctl1 pop`) on a new line above the cursor's line and
+  runs it. The trailing `ctl1 pop` calls it once, so the slider shows whenever that line runs (after
+  a reload too), not only at `ctl1`'s first use.
 - Tests that passed:
   - `node web/smoke.mjs` (Node plays the audio thread's role):
     - all 369 of sapf's own language tests in `unit-tests.txt` pass. The test lists any that

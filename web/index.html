@@ -5,7 +5,11 @@
 <title>sapf web</title>
 <link rel="icon" href="favicon.png">
 <style>
+  /* Barlow (SIL OFL, fonts/OFL.txt), latin subset */
+  @font-face { font-family: Barlow; font-weight: 400; font-display: swap; src: url(fonts/barlow-400.woff2) format("woff2"); }
+  @font-face { font-family: Barlow; font-weight: 600; font-display: swap; src: url(fonts/barlow-600.woff2) format("woff2"); }
   :root {
+    --ui: Barlow, system-ui, sans-serif;
     --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
     --text: #c8ccd2; --dim: #7d848e; --amber: #ffb454; --red: #ff7b72; --phosphor: #7ee787;
   }
@@ -39,7 +43,7 @@
 
   /* plastic keycaps */
   button, .btn {
-    font: 12px system-ui, sans-serif; text-transform: uppercase; color: #d6d9de; padding: 5px 12px; cursor: pointer;
+    font: 12px var(--ui); text-transform: uppercase; color: #d6d9de; padding: 5px 12px; cursor: pointer;
     border: 1px solid #0009; border-radius: 5px;
     background: linear-gradient(#4a4e55, #33363b);
     box-shadow: inset 0 1px 0 #ffffff26, 0 2px 0 #131518, 0 3px 6px #0007;
@@ -57,7 +61,7 @@
     position: absolute; z-index: 10; top: calc(100% + 8px); left: 0; width: 260px; max-height: 70vh; overflow: auto;
     padding: 6px; border-radius: 8px; background: linear-gradient(#2e3136, #222428);
     box-shadow: inset 0 1px 0 #ffffff14, 0 14px 34px #000c, 0 0 0 1px #000;
-    font: 13px system-ui, sans-serif; /* one font for the whole menu */
+    font: 13px var(--ui); /* one font for the whole menu */
   }
   .pop .row { display: flex; gap: 6px; padding: 2px 0 6px; }
   .pop input {
@@ -132,7 +136,7 @@
   #controls:empty { display: none; }
   #controls label { display: grid; grid-template-columns: 7em 1fr 5em; gap: 10px; align-items: center; margin: 6px 0; }
   #controls span { color: var(--dim); overflow: hidden; text-overflow: ellipsis; }
-  #controls output { color: var(--amber); text-align: right; }
+  #controls output { color: var(--amber); text-align: right; font-variant-numeric: tabular-nums; }
   input[type=range] { appearance: none; background: none; height: 22px; margin: 0; }
   input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: #0b0c0e; box-shadow: inset 0 1px 2px #000, 0 1px 0 #ffffff12; }
   input[type=range]::-moz-range-track { height: 4px; border-radius: 2px; background: #0b0c0e; box-shadow: inset 0 1px 2px #000, 0 1px 0 #ffffff12; }
@@ -237,7 +241,16 @@ let sapf, ctx;
 
 // `slider` / `xslider` (sapf_web.cpp) call this each time they run: one row per name, kept across runs.
 const controls = document.getElementById('controls'), rows = [];
-const fmt = v => String(+v.toPrecision(4));
+// Fixed decimals per slider, so the label keeps its width while dragging: enough to show about
+// 1/1000 of the range (for xslider, of the range's low end, where steps are finest), but no
+// more than keep the widest value within 8 characters, what the value column fits.
+function decimals(lo, hi, exp) {
+  const res = (exp ? Math.min(Math.abs(lo), Math.abs(hi)) * Math.abs(Math.log(hi / lo)) : Math.abs(hi - lo)) / 1000;
+  const want = res > 0 ? Math.ceil(-Math.log10(res) - 1e-9) : 2;
+  const whole = String(Math.round(Math.max(Math.abs(lo), Math.abs(hi)))).length + (lo < 0); // digits + sign
+  return Math.max(0, Math.min(want, 8 - whole - 1)); // - 1 for the point
+}
+const fmt = (v, d) => v.toFixed(d).replace(/^-(?=[0.]*$)/, ''); // no "-0.000"
 function onSapfSlider(id, name, lo, hi, value, exp) {
   let row = rows[id];
   // Same range: sapf left the value alone, and `value` may predate a drag in flight.
@@ -250,11 +263,12 @@ function onSapfSlider(id, name, lo, hi, value, exp) {
   const [label, input, output] = row.children;
   const toValue = p => exp ? lo * (hi / lo) ** p : lo + p * (hi - lo);
   const toPos = v => hi === lo ? 0 : exp ? Math.log(v / lo) / Math.log(hi / lo) : (v - lo) / (hi - lo);
+  const d = decimals(lo, hi, exp);
   row.range = `${lo} ${hi} ${exp}`;
   label.textContent = name;
   input.value = toPos(value);
-  output.textContent = fmt(value);
-  input.oninput = () => { const v = toValue(+input.value); output.textContent = fmt(v); sapf._sapf_set_ctl(id, v); };
+  output.textContent = fmt(value, d);
+  input.oninput = () => { const v = toValue(+input.value); output.textContent = fmt(v, d); sapf._sapf_set_ctl(id, v); };
 }
 
 // Reads the file when asked, so the page keeps no second copy of what sapf's in-memory FS holds.
@@ -593,16 +607,16 @@ document.getElementById('about').onclick = () => aboutDialog.showModal();
 document.getElementById('aboutClose').onclick = () => aboutDialog.close();
 aboutDialog.onclick = e => e.target === aboutDialog && aboutDialog.close(); // backdrop click
 // Inserts a slider definition on a new line above the cursor's line and runs it.
-// A function, not a stored signal: each use reads the slider afresh. It is called once
-// (and its result dropped) so the slider shows now, not at its first use.
+// A function, not a stored signal: each use reads the slider afresh. The line also calls it once
+// (and drops the result) so the slider shows whenever the line runs, not at its first use.
 document.getElementById('addSlider').onclick = () => {
   let n = 1;
   const text = editor.state.doc.toString();
   while (text.includes(`"ctl${n}"`) || rows.some(r => r.firstChild.textContent === `ctl${n}`)) ++n;
-  const line = `\\["ctl${n}" 0 1 .5 slider] = ctl${n}`;
+  const line = `\\["ctl${n}" 0 1 .5 slider] = ctl${n}  ctl${n} pop`;
   const at = editor.state.doc.lineAt(editor.state.selection.main.head).from;
   editor.dispatch({ changes: { from: at, insert: line + '\n' }, selection: { anchor: at + line.length } });
   editor.focus();
-  run(`${line} ctl${n} pop`);
+  run(line);
 };
 </script>
