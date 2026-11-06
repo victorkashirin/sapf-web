@@ -22,6 +22,8 @@ const docs = parseHelp(out.slice(0, out.indexOf(END)));
 assert.ok(docs.length > 800, `helpall parsed: ${docs.length} entries`);
 assert.deepEqual(docs.find(d => d.name === 'sinosc'),
   { name: 'sinosc', category: 'oscillator unit generators', special: 'zz', sig: '(freq phase --> out)', desc: 'sine wave oscillator.' });
+// The page opens my prelude instead of the built-in file (onSapfOpen in index.html).
+docs.find(d => d.name === 'prelude').desc = 'opens my prelude (File > my prelude), loaded after the built-in prelude at startup, in the editor.';
 fs.writeFileSync(new URL('build/sapf-docs.json', import.meta.url), JSON.stringify(docs));
 console.log(`wrote build/sapf-docs.json (${docs.length} entries)`);
 process.exit(0); // the evaluation thread keeps Node alive

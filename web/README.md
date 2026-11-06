@@ -42,8 +42,9 @@ What works:
   `/System/Library/Sounds/Submarine.aiff` in the built-in function examples). Uploads are kept in
   IndexedDB and survive a reload. Formats libsndfile cannot read (MP3, Ogg, FLAC, ...) are decoded
   by the browser at upload and stored as 32-bit float WAV at 48 kHz.
-- "Open" means download: `>sfo`, `sgram` and `prelude` run `system("open <file>")`; the web build
-  runs no command and instead hands the file to the page, which downloads it.
+- "Open" means download: `>sfo` and `sgram` run `system("open <file>")`; the web build
+  runs no command and instead hands the file to the page, which downloads it. `prelude` does the
+  same, and the page opens your own prelude in the editor instead (see the File menu below).
 - Mouse UGens (`mousex`, `mousey`, `xmousex`, `xmousey` and their `1` forms) follow the pointer
   over the page window, clamped to [0,1] (y is 1 at the top), instead of the whole screen as on the desktop.
 - Page sliders (web only): `name lo hi default slider` (linear) and `xslider` (exponential) add a
@@ -175,7 +176,7 @@ Two build choices matter for speed:
 
 | File | Purpose |
 |---|---|
-| `sapf_web.cpp` | Replaces `src/main.cpp`. Overrides `system()` so it never runs a command (under Node Emscripten's `system()` would use the host shell); `open <file>` instead calls the page's `onSapfOpen`, which downloads the file. Exports `sapf_set_mouse(x, y)` for the mouse UGens. Exports `sapf_init(sampleRate, preludePath)` (starts the evaluation thread, which loads the prelude), `sapf_eval(code)` (queues code and returns at once), `sapf_busy()` (non-zero while code is queued or running), `sapf_render(out, frames, channels)` and `sapf_num_playing()`. |
+| `sapf_web.cpp` | Replaces `src/main.cpp`. Overrides `system()` so it never runs a command (under Node Emscripten's `system()` would use the host shell); `open <file>` instead calls the page's `onSapfOpen`, which downloads the file. Exports `sapf_set_mouse(x, y)` for the mouse UGens. Exports `sapf_init(sampleRate, preludePath)` (starts the evaluation thread, which loads the prelude, and keeps the path for the `prelude` op), `sapf_eval(code)` (queues code and returns at once), `sapf_busy()` (non-zero while code is queued or running), `sapf_render(out, frames, channels)` and `sapf_num_playing()`. |
 | `audio_worklet.cpp` | Browser build only. `sapf_start_audio(preludePath)` creates the AudioContext, calls `sapf_init` with its sample rate, and starts a Wasm Audio Worklet whose `process` callback calls `sapf_render`. `sapf_audio_node()` returns the node's handle, for example to connect an analyser. |
 | `shim/RtAudio.h` | Fake RtAudio. `openStream` records the callback; `sapf_render` calls every recorded callback and sums them. A mutex guards the list. `stopStream` marks the stream as fading and waits; `sapf_render` applies a 10 ms linear fade and then drops the stream, after which `Play.cpp` deletes the `Player`. `src/Play.cpp` builds unchanged. |
 | `shim/RtMidi.h` | RtMidi with no ports. |
@@ -247,6 +248,12 @@ Without a keyboard (phones, tablets), the Line, Block and Para buttons on the ed
 The File menu keeps named files in the browser's local storage: type a name and Save, then each
 edit saves the file. New and the two example files (`sapf-examples.txt`, `sapf-bif-examples.txt`, which
 `npm run build` copies into `build/`) open an unsaved text; leaving it once edited asks first.
+
+File > my prelude is a special saved file (the name `prelude`, listed apart from the others): your
+own library. On every page start it is written to `/my-prelude.txt` and loaded with `load` right
+after the built-in prelude, so its words are always defined and can replace built-in ones. The
+`prelude` word opens it; File > built-in prelude shows the built-in one. Hover docs and completion
+do not cover its words.
 
 Hovering a word shows its documentation; completion offers built-ins and prelude functions.
 With "Solo" on (the default), evaluating code that calls `play` or `record` stops the

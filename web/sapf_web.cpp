@@ -157,6 +157,7 @@ EMSCRIPTEN_KEEPALIVE void sapf_init(double sampleRate, const char* preludeFile)
 	vm.def("xslider", 4, 1, [](Thread& th, Prim*) { slider(th, true); },
 		"(name lo hi default --> out) smoothed signal of a page slider with the exponential range [lo,hi]. Running it again keeps the slider's position.");
 	gThread = new Thread();
+	if (preludeFile) vm.prelude_file = strdup(preludeFile); // for the `prelude` op; the caller's string is temporary
 	gPending = 1; // the prelude
 	std::thread(evalLoop, std::string(preludeFile ? preludeFile : "")).detach();
 }

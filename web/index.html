@@ -93,7 +93,7 @@
   .pop .del:hover, .pop .del:focus-visible { background: none; color: var(--red); }
   .pop .tag { font-size: 10px; font-weight: 600; letter-spacing: .08em; padding: 10px 8px 4px; margin-top: 4px; border-top: 1px solid #ffffff0d; }
   .pop .none { color: var(--dim); padding: 5px 8px; }
-  #fileList .item, #soundList .item, .pop .none, .pop [data-example] { padding-left: 18px; } /* entries under a heading */
+  #fileList .item, #soundList .item, .pop .none, .pop [data-example], .pop .prelude { padding-left: 18px; } /* entries under a heading */
   .pop .hint { color: var(--dim); font-size: 11px; padding: 8px 8px 2px; border-top: 1px solid #ffffff0d; margin-top: 4px; }
   #fileLabel { color: var(--dim); letter-spacing: .1em; text-transform: none; }
   #clearLog { float: right; margin-top: -2px; padding: 1px 8px; font-size: 10px; letter-spacing: .1em; color: var(--dim); }
@@ -205,6 +205,10 @@
       <button class="item" id="export">Export</button>
       <div class="tag">saved</div>
       <div id="fileList"></div>
+      <div class="tag">prelude</div>
+      <div class="file"><button class="item prelude" id="myPrelude">my prelude</button><button class="del" id="delPrelude" title="Delete my prelude: it stops loading, and opens as the template again" aria-label="Delete my prelude">×</button></div>
+      <button class="item prelude" id="builtinPrelude">built-in prelude</button>
+      <div class="hint">Your prelude is your own library. It loads after the built-in one every time the page starts, so its words are always defined.</div>
       <div class="tag">examples</div>
       <button class="item" data-example="sapf-examples.txt">sapf examples</button>
       <button class="item" data-example="sapf-bif-examples.txt">built-in function examples</button>
@@ -371,6 +375,7 @@ function download(path) {
 // console. It also downloads at once while the key press that ran the code still counts as a user
 // action: later downloads without one make Chrome ask, and they fail silently once refused.
 function onSapfOpen(path) {
+  if (path === '/sapf-prelude.txt') return openPrelude(); // the `prelude` op: edit my prelude
   const auto = navigator.userActivation?.isActive;
   const a = document.createElement('a');
   a.href = '#';
@@ -493,6 +498,13 @@ async function boot() {
   sapf.onSapfOpen = onSapfOpen;
   // An absolute path: the working directory is /sounds.
   ctx = sapf.emscriptenGetAudioObject(sapf.ccall('sapf_start_audio', 'number', ['string'], ['/sapf-prelude.txt']));
+  // My prelude (File > my prelude) loads next, through `load` like the built-in one. loadFile drops
+  // the file's last byte, hence the newline.
+  const mine = store.get('file:' + PRELUDE);
+  if (mine?.trim()) {
+    sapf.FS.writeFile('/my-prelude.txt', mine + '\n');
+    sapf.ccall('sapf_eval', null, ['string'], ['"/my-prelude.txt" load\n']);
+  }
   window.sapf = sapf; window.sapfCtx = ctx; // for debugging in devtools
   // The worklet node appears once its thread starts; tap it then. The analysers' default
   // channelCountMode 'max' downmixes stereo to mono, (L+R)/2. The waveform gets its own, with the
@@ -719,13 +731,27 @@ const store = {
 // Files: named texts in browser storage ('file:<name>'), saved on every edit. Otherwise the editor holds a
 // scratch text (the welcome text, New, an example) kept only in 'code'; leaving it once edited asks first.
 let buf; // { file } or { title, dirty }
+// My prelude is the saved file of this name, shown in its own place in the File menu, not under saved.
+const PRELUDE = 'prelude';
+const preludeIntro = `; My prelude: your own library of words.
+;
+; This file is special. It loads every time the page starts, right after the built-in prelude
+; (File > built-in prelude), so whatever you define here is always there. A word with the
+; same name as a built-in one replaces it. It is kept in this browser and saved as you type.
+;
+; Changes take effect on the next page load. To use a definition now, evaluate it here.
+; The \`prelude\` word opens this file too.
+;
+; Define a word: arguments, then the body in brackets, then = and the name, e.g.
+; \\freq [freq 0 sinosc .2 *] = beep
+`;
 try { buf = JSON.parse(store.get('buf')); } catch {}
 const welcome = document.getElementById('example').textContent;
 buf ??= { title: 'untitled', dirty: (store.get('code') ?? welcome) !== welcome }; // text from before files existed
 if (buf.file && store.get('file:' + buf.file) === null) buf = { title: buf.file, dirty: true }; // deleted elsewhere
 const fileLabel = document.getElementById('fileLabel');
 const showBuf = () => {
-  fileLabel.textContent = '· ' + (buf.file ?? buf.title + (buf.dirty ? ' (unsaved)' : ''));
+  fileLabel.textContent = '· ' + (buf.file === PRELUDE ? 'my prelude (loads at startup)' : buf.file ?? buf.title + (buf.dirty ? ' (unsaved)' : ''));
   store.set('buf', JSON.stringify(buf));
 };
 let warned = false;
@@ -751,7 +777,8 @@ function openText(text, next) {
 function save() {
   const name = fileName.value.trim(), text = editor.state.doc.toString();
   if (!name) return fileName.focus();
-  if (name !== buf.file && store.get('file:' + name) !== null && !confirm(`Replace the saved "${name}"?`)) return;
+  if (name !== buf.file && store.get('file:' + name) !== null &&
+    !confirm(name === PRELUDE ? 'Replace my prelude, which loads at startup?' : `Replace the saved "${name}"?`)) return;
   if (!store.set('file:' + name, text)) return print(`Could not save "${name}": browser storage is full or blocked.`, 'err');
   buf = { file: name };
   showBuf();
@@ -774,11 +801,25 @@ for (const b of fileMenu.querySelectorAll('[data-example]')) b.onclick = async (
   if (!r.ok) return print(`Could not load ${b.dataset.example} (${r.status})`, 'err');
   openText(await r.text(), { title: b.textContent, dirty: false });
 };
+function openPrelude() {
+  if (store.get('file:' + PRELUDE) === null && !store.set('file:' + PRELUDE, preludeIntro))
+    return print('Could not create my prelude: browser storage is full or blocked.', 'err');
+  openText(store.get('file:' + PRELUDE), { file: PRELUDE });
+}
+document.getElementById('myPrelude').onclick = openPrelude;
+document.getElementById('delPrelude').onclick = () => {
+  if (!confirm('Delete my prelude? It stops loading at startup; opening it again starts from the template.')) return;
+  store.del('file:' + PRELUDE);
+  if (buf.file === PRELUDE) { buf = { title: 'my prelude', dirty: true }; showBuf(); } // as deleting a saved file: its text stays, unsaved
+};
+document.getElementById('builtinPrelude').onclick = async () =>
+  openText((await soundsReady).FS.readFile('/sapf-prelude.txt', { encoding: 'utf8' }), { title: 'built-in prelude (view only; edit my prelude)', dirty: false });
 // The saved list is rebuilt each time the menu opens.
 fileMenu.ontoggle = () => {
   if (!fileMenu.open) return;
-  fileName.value = buf.file ?? '';
-  const list = document.getElementById('fileList'), names = store.keys('file:').sort();
+  fileName.value = buf.file === PRELUDE ? '' : buf.file ?? '';
+  document.getElementById('myPrelude').classList.toggle('cur', buf.file === PRELUDE);
+  const list = document.getElementById('fileList'), names = store.keys('file:').filter(n => n !== PRELUDE).sort();
   list.replaceChildren();
   if (!names.length) list.innerHTML = '<div class="none">nothing saved yet</div>';
   for (const name of names) {
