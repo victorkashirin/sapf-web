@@ -1,7 +1,7 @@
 // The code editor: CodeMirror 6 with the vs-sapf extension's features (highlighting, hover docs,
 // completion, line/block/paragraph evaluation with a flash, formatting). Bundled by `npm run build`.
 import { EditorView, basicSetup } from 'codemirror';
-import { EditorState, Prec, StateEffect, StateField } from '@codemirror/state';
+import { Compartment, EditorState, Prec, StateEffect, StateField } from '@codemirror/state';
 import { Decoration, hoverTooltip, keymap } from '@codemirror/view';
 import { StreamLanguage, LanguageSupport, HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import { tags as t } from '@lezer/highlight';
@@ -80,9 +80,10 @@ const flashField = StateField.define({
 });
 
 // run(code) evaluates code in sapf; onChange(text), if given, gets the text after each edit. Returns the EditorView,
-// with evalWith(lineAt | blockAt | paragraphAt) and setDoc(text): replaces the text and the undo history (so undo can't bring back another file), without onChange.
+// with evalWith(lineAt | blockAt | paragraphAt), setTheme(name) (a key of `themes`) and setDoc(text): replaces the text and the undo history (so undo can't bring back another file), without onChange.
 export function createEditor(parent, doc, run, onChange) {
-  let flashTimer;
+  let flashTimer, themeName = 'amber';
+  const palette = new Compartment();
   const evalWith = pick => view => {
     const { from, to } = view.state.selection.main;
     const r = pick(view.state.doc.toString(), from, to);
@@ -129,13 +130,18 @@ export function createEditor(parent, doc, run, onChange) {
     hover,
     flashField,
     theme,
-    syntaxHighlighting(highlight),
+    palette.of(syntaxHighlighting(themes.amber)),
     EditorView.updateListener.of(u => { if (u.docChanged && onChange) onChange(u.state.doc.toString()); }),
   ];
   const view = new EditorView({ parent, state: EditorState.create({ doc, extensions }) });
   view.evalWith = pick => evalWith(pick)(view); // the run buttons: same flash and code as the keys
+  view.setTheme = name => {
+    themeName = themes[name] ? name : 'amber';
+    view.dispatch({ effects: palette.reconfigure(syntaxHighlighting(themes[themeName])) });
+  };
   view.setDoc = text => {
     view.setState(EditorState.create({ doc: text, extensions }));
+    view.setTheme(themeName); // the new state starts from the compartment's initial theme
     view.scrollDOM.scrollTo(0, 0); // setState keeps the old scroll position
   };
   return view;
@@ -143,7 +149,7 @@ export function createEditor(parent, doc, run, onChange) {
 
 // Dark "screen" look; the page draws the bezel around it.
 const theme = EditorView.theme({
-  '&': { height: '100%', fontSize: '14px', color: '#c8ccd2', backgroundColor: 'transparent' },
+  '&': { height: '100%', fontSize: 'var(--code-size, 14px)', color: '#c8ccd2', backgroundColor: 'transparent' },
   '&.cm-focused': { outline: 'none' },
   '.cm-scroller': { fontFamily: 'inherit', lineHeight: '1.55' },
   '.cm-content': { caretColor: '#ffb454', padding: '10px 0' },
@@ -156,6 +162,9 @@ const theme = EditorView.theme({
   '.cm-matchingBracket, &.cm-focused .cm-matchingBracket': { backgroundColor: '#ffb45426', outline: 'none' },
   '.cm-searchMatch': { backgroundColor: '#ffb45433' },
   '.cm-panels': { backgroundColor: '#1a1d21', color: '#c8ccd2' },
+  // an engraved edge against the code: a dark groove, then the bezels' faint highlight
+  '.cm-panels-bottom': { borderTop: '1px solid #000', boxShadow: 'inset 0 1px 0 #ffffff14, 0 -4px 12px #0006' },
+  '.cm-panels-top': { borderBottom: '1px solid #000', boxShadow: 'inset 0 -1px 0 #ffffff14, 0 4px 12px #0006' },
   // search panel: inputs like the File menu's, buttons as the page's keycaps, all in the button font, a plain × close
   '.cm-panel.cm-search': { padding: '4px 36px 6px 6px' },
   '.cm-panel.cm-search > *': { verticalAlign: 'middle' },
@@ -183,14 +192,22 @@ const theme = EditorView.theme({
   '.sapf-doc-cat': { color: '#7d848e', margin: '2px 0' },
 }, { dark: true });
 
-const highlight = HighlightStyle.define([
-  { tag: t.keyword, color: '#ffb454' },
-  { tag: t.string, color: '#a6d189' },
-  { tag: t.number, color: '#79c0ff' },
-  { tag: t.comment, color: '#5c636d', fontStyle: 'italic' },
-  { tag: t.atom, color: '#d2a8ff' },
-  { tag: t.operator, color: '#ff7b72' },
-  { tag: t.bracket, color: '#7d848e' },
-  { tag: t.definition(t.variableName), color: '#f2cc60' },
-  { tag: t.variableName, color: '#c8ccd2' },
+// Syntax colours, picked in the editor's settings. Order: keyword, string, number, comment, atom,
+// operator, bracket, definition, other words; comments are italic except in `contrast`.
+const style = (k, s, n, c, a, o, b, d, v, italic = true) => HighlightStyle.define([
+  { tag: t.keyword, color: k },
+  { tag: t.string, color: s },
+  { tag: t.number, color: n },
+  { tag: t.comment, color: c, fontStyle: italic ? 'italic' : 'normal' },
+  { tag: t.atom, color: a },
+  { tag: t.operator, color: o },
+  { tag: t.bracket, color: b },
+  { tag: t.definition(t.variableName), color: d },
+  { tag: t.variableName, color: v },
 ]);
+export const themes = {
+  amber: style('#ffb454', '#a6d189', '#79c0ff', '#5c636d', '#d2a8ff', '#ff7b72', '#7d848e', '#f2cc60', '#c8ccd2'),
+  phosphor: style('#7ee787', '#b4f0b8', '#a8e6a3', '#3f6a49', '#9fe0a0', '#7ee787', '#4f7d5a', '#d2f7cf', '#9fcfa4'),
+  contrast: style('#ffcc66', '#b5f28a', '#8fd0ff', '#8a929c', '#e3c2ff', '#ff9488', '#aab2bc', '#ffe08a', '#f0f2f5', false),
+  plain: style('#e6e8eb', '#c8ccd2', '#c8ccd2', '#5c636d', '#c8ccd2', '#c8ccd2', '#7d848e', '#e6e8eb', '#c8ccd2'),
+};

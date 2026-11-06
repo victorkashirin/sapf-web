@@ -53,21 +53,22 @@
   }
   button:hover, .btn:hover { background: linear-gradient(#52565e, #383b41); }
   button:active, .btn:active { transform: translateY(2px); background: linear-gradient(#36393e, #303338); box-shadow: inset 0 1px 2px #0008, 0 0 0 #131518; }
-  #runs { float: right; margin-top: -2px; display: none; gap: 4px; } /* keyboards have the Enter keys */
+  #runs { display: none; gap: 4px; } /* keyboards have the Enter keys */
   #runs button { padding: 6px 14px; font-size: 11px; letter-spacing: .1em; color: var(--amber); } /* finger-sized */
   @media (pointer: coarse) { #runs { display: flex; } }
   .toggles { display: inline-flex; gap: 6px; } /* wrap together */
   .break { display: none; } /* the mobile header's row break */
   button.icon { padding: 4px 8px; line-height: 0; color: var(--dim); }
   button.icon svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
-  button.icon[aria-pressed="true"] { color: var(--phosphor); }
-  button.icon[aria-pressed="true"] svg { filter: drop-shadow(0 0 3px #7ee78799); }
+  button.icon[aria-pressed="true"], button.icon[aria-expanded="true"] { color: var(--phosphor); }
+  button.icon[aria-pressed="true"] svg, button.icon[aria-expanded="true"] svg { filter: drop-shadow(0 0 3px #7ee78799); }
 
   /* File menu: a <details> dropdown */
   .menu { position: relative; }
   .menu summary { list-style: none; }
   .menu summary::-webkit-details-marker { display: none; }
-  .menu summary::after { content: " ▾"; color: var(--dim); }
+  .menu summary { padding-right: 10px; }
+  .menu summary::after { content: "▾"; margin-left: 7px; color: var(--dim); }
   .menu .pop {
     position: absolute; z-index: 10; top: calc(100% + 8px); left: 0; width: 260px; max-height: 70vh; overflow: auto;
     padding: 6px; border-radius: 8px; background: linear-gradient(#2e3136, #222428);
@@ -96,7 +97,21 @@
   #fileList .item, #soundList .item, .pop .none, .pop [data-example], .pop .prelude { padding-left: 18px; } /* entries under a heading */
   .pop .hint { color: var(--dim); font-size: 11px; padding: 8px 8px 2px; border-top: 1px solid #ffffff0d; margin-top: 4px; }
   #fileLabel { color: var(--dim); letter-spacing: .1em; text-transform: none; }
-  #clearLog { float: right; margin-top: -2px; padding: 1px 8px; font-size: 10px; letter-spacing: .1em; color: var(--dim); }
+  #clearLog { padding: 1px 8px; font-size: 10px; letter-spacing: .1em; color: var(--dim); }
+  /* title strip: name, then its buttons at the right end, the cog last */
+  .panel > .tag { display: flex; align-items: center; gap: .5em; white-space: nowrap; }
+  #fileLabel { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  #runs, #clearLog, .cog { margin: -4px 0 -2px auto; } /* the strip pads 2px above, 6px below: this centres them between the bezel and the screen */
+  #clearLog + .cog { margin-left: 0; }
+  @media (pointer: coarse) { #runs + .cog { margin-left: 0; } button.cog { padding: 6.5px 10px; } } /* as tall as the finger-sized Run buttons */
+  button.cog { padding: 1px 5px; } /* as tall as Clear beside it */
+  button.cog svg { width: 12px; height: 12px; }
+  /* a panel's settings: a strip above its screen, so changes show beside it rather than under a popup */
+  .settings { display: flex; flex-wrap: wrap; gap: 0 16px; padding: 0 4px 8px; font: 12px var(--ui); }
+  .settings label { flex: 1 1 15em; display: grid; grid-template-columns: 4.5em minmax(3em, 1fr) 4.5em; gap: 8px; align-items: center; }
+  .settings span { color: var(--dim); }
+  .settings output { color: var(--amber); text-align: right; font-variant-numeric: tabular-nums; }
+  .settings select { grid-column: span 2; font: inherit; color: var(--text); padding: 3px 6px; border: 0; border-radius: 4px; background: #121417; box-shadow: inset 0 1px 3px #000; }
   #stop { color: var(--red); }
 
   /* LED toggle */
@@ -138,7 +153,7 @@
 
   #log {
     margin: 0; padding: 10px 12px; overflow: auto; white-space: pre-wrap; word-break: break-word;
-    font: 13px/1.45 var(--mono); color: var(--phosphor); text-shadow: 0 0 5px #7ee78755;
+    font: var(--log-size, 13px)/1.45 var(--mono); color: var(--phosphor); text-shadow: 0 0 5px #7ee78755;
     background:
       repeating-linear-gradient(0deg, #00000038 0 1px, transparent 1px 3px),
       radial-gradient(ellipse at center, #0e1611, #070a08 85%);
@@ -181,9 +196,9 @@
     main { padding: 10px 16px 16px; }
     .panel > .tag { cursor: auto; touch-action: auto; } /* the narrow layout is fixed: nothing to drag */
     #clearLog { padding: 6px 14px; font-size: 11px; } /* finger-sized */
-    .panel > .tag { display: flex; align-items: center; gap: .5em; white-space: nowrap; }
-    #fileLabel { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-    #runs, #clearLog { float: none; margin: -4px 0 0 auto; }
+    #runs, #clearLog, .cog { margin-top: -3px; margin-bottom: -1px; }
+    button.cog { padding: 6.5px 10px; } /* as tall as the finger-sized Clear */
+    .settings label { grid-template-columns: 3.2em minmax(2em, 1fr) 4em; gap: 6px; }
     /* two rows: brand, menus and view toggles; then the transport (Stop and Add control share the
        spare width, up to 10em each), the Solo LED and ?. `order` moves the toggles up; GitHub is in About. */
     header { padding: 10px 16px 2px; gap: 10px 6px; }
@@ -256,10 +271,10 @@
   </div>
 </dialog>
 <main>
-  <section class="panel" data-panel="editor"><div class="tag">editor <span id="fileLabel"></span><span id="runs"><button data-run="line" title="Run the selection or the line (Mod+Enter)">Line</button><button data-run="block" title="Run the selection or the ( ) block around the cursor (Shift+Enter)">Block</button><button data-run="paragraph" title="Run the selection or the paragraph (Mod+Shift+Enter)">Para</button></span></div><div class="screen" id="code"></div></section>
-  <section class="panel" data-panel="console"><div class="tag">console <button id="clearLog" title="Clear console (Mod+K)">Clear</button></div><div id="controls"></div><pre class="screen" id="log"></pre></section>
-  <section class="panel" data-panel="scope"><div class="tag">scope</div><canvas class="screen" id="scope" role="img" aria-label="Oscilloscope of the output" title="Drag sideways for the time shown, up or down for the gain"></canvas></section>
-  <section class="panel" data-panel="fall"><div class="tag">spectrum</div><canvas class="screen" id="fall" role="img" aria-label="Spectrogram of the output" title="Drag sideways for the time shown, up or down for the brightness"></canvas></section>
+  <section class="panel" data-panel="editor"><div class="tag">editor <span id="fileLabel"></span><span id="runs"><button data-run="line" title="Run the selection or the line (Mod+Enter)">Line</button><button data-run="block" title="Run the selection or the ( ) block around the cursor (Shift+Enter)">Block</button><button data-run="paragraph" title="Run the selection or the paragraph (Mod+Shift+Enter)">Para</button></span><button class="icon cog" title="Settings" aria-label="Editor settings" aria-expanded="false"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"/><circle cx="8" cy="8" r="4.3"/></svg></button></div><div class="settings" hidden><label><span>theme</span><select id="theme"><option value="amber">amber</option><option value="phosphor">phosphor</option><option value="contrast">high contrast</option><option value="plain">plain</option></select></label></div><div class="screen" id="code"></div></section>
+  <section class="panel" data-panel="console"><div class="tag">console <button id="clearLog" title="Clear console (Mod+K)">Clear</button><button class="icon cog" title="Settings" aria-label="Console settings" aria-expanded="false"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"/><circle cx="8" cy="8" r="4.3"/></svg></button></div><div class="settings" hidden></div><div id="controls"></div><pre class="screen" id="log"></pre></section>
+  <section class="panel" data-panel="scope"><div class="tag">scope<button class="icon cog" title="Settings" aria-label="Scope settings" aria-expanded="false"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"/><circle cx="8" cy="8" r="4.3"/></svg></button></div><div class="settings" hidden></div><canvas class="screen" id="scope" role="img" aria-label="Oscilloscope of the output" title="Drag sideways for the time shown, up or down for the gain"></canvas></section>
+  <section class="panel" data-panel="fall"><div class="tag">spectrum<button class="icon cog" title="Settings" aria-label="Spectrum settings" aria-expanded="false"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"/><circle cx="8" cy="8" r="4.3"/></svg></button></div><div class="settings" hidden></div><canvas class="screen" id="fall" role="img" aria-label="Spectrogram of the output" title="Drag sideways for the time shown, up or down for the brightness"></canvas></section>
 </main>
 <div id="drop" hidden></div>
 <script type="text/plain" id="example">; Welcome to SAPF (Sound As Pure Form), a stack language for sound.
@@ -515,11 +530,6 @@ async function boot() {
     analyser = new AnalyserNode(ctx, { fftSize: 4096, smoothingTimeConstant: .5, minDecibels: -100, maxDecibels: -10 });
     waveAn = new AnalyserNode(ctx, { fftSize: 32768 });
     vizNode = sapf.emscriptenGetAudioObject(h);
-    KEYS.forEach(([sk, lk], i) => {
-      if (+store.get(sk)) spans[i] = clampTo(SPAN[i], +store.get(sk));
-      const l = parseFloat(store.get(lk)); // a level can be 0 or negative, so not `||`
-      if (isFinite(l)) levels[i] = clampTo(LEVEL[i], l);
-    });
     wire();
   };
   tap();
@@ -547,11 +557,22 @@ let analyser, waveAn, waveWin, hist, waveT = 0, spec, col, rowMax, last, acc = 0
 // at short spans and race at long ones), and the waterfall's history in seconds, doubling per 80px;
 // and up or down its level (up = more): the waveform's gain, doubling per 80px, and the waterfall's boost in dB, 12 per
 // 80px, which lifts quiet partials into the colours (and pushes loud ones to white).
-// All kept in the browser; they load when audio starts, as `store` comes later.
+// The same four are sliders in the panels' settings. All kept in the browser.
 const SPAN = [[1, 2000], [1, 60]], LEVEL = [[1 / 8, 64], [-30, 60]];
 const spans = [20, 10], levels = [1, 0], KEYS = [['scopeMs', 'scopeGain'], ['fallSec', 'fallDb']];
 let hint = { side: 0, until: 0 }; // which panel shows its settings, and until when
 const clampTo = ([lo, hi], v) => Math.max(lo, Math.min(hi, v));
+const vizSync = []; // per side: refreshes its settings' sliders
+// Sets a panel's span and level, rounded as shown, and keeps them.
+function tune(side, s, l) {
+  s = clampTo(SPAN[side], s);
+  spans[side] = +s.toPrecision(s < 10 ? 2 : 3);
+  levels[side] = side ? Math.round(clampTo(LEVEL[1], l)) : +clampTo(LEVEL[0], l).toPrecision(2);
+  KEYS[side].forEach((k, i) => store.set(k, [spans, levels][i][side]));
+  vizSync[side]?.();
+}
+const vizText = side => [side ? `${spans[1]} s` : spans[0] >= 1000 ? `${spans[0] / 1000} s` : `${spans[0]} ms`,
+  side ? `${levels[1] > 0 ? '+' : ''}${levels[1]} dB` : `×${levels[0]}`];
 [scope, fall].forEach((c, side) => {
   c.onpointerdown = e => {
     const x0 = e.clientX, y0 = e.clientY, s0 = spans[side], l0 = levels[side];
@@ -559,10 +580,8 @@ const clampTo = ([lo, hi], v) => Math.max(lo, Math.min(hi, v));
     hint = { side, until: Infinity };
     c.onpointermove = e => {
       const dx = e.clientX - x0, top = SPAN[side][1], up = (y0 - e.clientY) / 80;
-      const v = clampTo(SPAN[side], side ? s0 * 2 ** (dx / 80) : top * clampTo([0, 1], Math.cbrt(s0 / top) + dx / 800) ** 3);
-      spans[side] = +v.toPrecision(v < 10 ? 2 : 3);
-      levels[side] = side ? Math.round(clampTo(LEVEL[1], l0 + up * 12)) : +clampTo(LEVEL[0], l0 * 2 ** up).toPrecision(2);
-      KEYS[side].forEach((k, i) => store.set(k, [spans, levels][i][side]));
+      tune(side, side ? s0 * 2 ** (dx / 80) : top * clampTo([0, 1], Math.cbrt(s0 / top) + dx / 800) ** 3,
+        side ? l0 + up * 12 : l0 * 2 ** up);
     };
   };
   c.onlostpointercapture = () => { c.onpointermove = null; hint.until = performance.now() + 800; };
@@ -579,9 +598,7 @@ function drawSpan(g, side, now) {
   const pad = 8 * devicePixelRatio;
   g.font = `${11 * devicePixelRatio}px ${getComputedStyle(scope).fontFamily}`;
   g.fillStyle = '#ffb454'; g.textAlign = 'right'; g.textBaseline = 'top'; g.shadowColor = '#000'; g.shadowBlur = 3 * devicePixelRatio;
-  const level = side ? `${levels[1] > 0 ? '+' : ''}${levels[1]} dB` : `×${levels[0]}`;
-  const span = side ? `${spans[1]} s` : spans[0] >= 1000 ? `${spans[0] / 1000} s` : `${spans[0]} ms`;
-  g.fillText(`${span}  ${level}`, g.canvas.width - pad, pad);
+  g.fillText(vizText(side).join('  '), g.canvas.width - pad, pad);
   g.shadowBlur = 0;
 }
 // Only shown panels are fed and drawn: a hidden one's analyser is disconnected and its history
@@ -1031,6 +1048,54 @@ for (const id in vizPanels) {
   setViz(id, store.get(id) !== '0');
   document.getElementById(id).onclick = () => setViz(id, vizPanels[id].hidden);
 }
+
+// Panel settings: the cog in a title strip shows or hides the strip of settings above its screen.
+for (const p of Object.values(panels)) {
+  const cog = p.querySelector('.cog'), box = p.querySelector('.settings');
+  cog.onclick = () => { box.hidden = !box.hidden; cog.setAttribute('aria-expanded', !box.hidden); };
+}
+// A slider row in a settings strip: position 0..1 maps to a value by `to` and back by `from`.
+function knob(box, name, get, set, [to, from], show) {
+  const row = document.createElement('label');
+  row.innerHTML = '<span></span><input type="range" min="0" max="1" step="any"><output></output>';
+  const [label, input, out] = row.children;
+  label.textContent = name;
+  const sync = () => { input.value = from(get()); out.textContent = show(get()); };
+  input.oninput = () => { set(to(+input.value)); sync(); };
+  sync();
+  box.append(row);
+  return sync;
+}
+const lin = ([lo, hi]) => [p => lo + p * (hi - lo), v => (v - lo) / (hi - lo)];
+const expo = ([lo, hi]) => [p => lo * (hi / lo) ** p, v => Math.log(v / lo) / Math.log(hi / lo)];
+// Font sizes, in px, set as a CSS variable the editor's or console's font reads.
+function fontKnob(box, key, el, prop, def, after) {
+  let v = clampTo([9, 28], +store.get(key) || def);
+  const apply = () => { el.style.setProperty(prop, v + 'px'); after?.(); };
+  apply();
+  knob(box, 'size', () => v, x => { v = Math.round(x); apply(); store.set(key, v); }, lin([9, 28]), v => v + ' px');
+}
+const [codeBox, logBox, scopeBox, fallBox] = ['editor', 'console', 'scope', 'fall'].map(k => panels[k].querySelector('.settings'));
+fontKnob(codeBox, 'codeSize', document.getElementById('code'), '--code-size', 14, () => editor.requestMeasure());
+codeBox.prepend(codeBox.lastChild); // size before theme
+fontKnob(logBox, 'logSize', log, '--log-size', 13);
+const theme = document.getElementById('theme');
+theme.value = store.get('theme') ?? 'amber';
+if (!theme.value) theme.value = 'amber'; // a theme no longer offered
+editor.setTheme(theme.value);
+theme.onchange = () => { editor.setTheme(theme.value); store.set('theme', theme.value); };
+KEYS.forEach(([sk, lk], i) => {
+  if (+store.get(sk)) spans[i] = clampTo(SPAN[i], +store.get(sk));
+  const l = parseFloat(store.get(lk)); // a level can be 0 or negative, so not `||`
+  if (isFinite(l)) levels[i] = clampTo(LEVEL[i], l);
+});
+// The scope's span follows the cube of the slider, as its drag does; the rest double per step.
+const cube = [p => SPAN[0][1] * p ** 3, v => Math.cbrt(v / SPAN[0][1])];
+[[scopeBox, cube, expo(LEVEL[0]), 'gain'], [fallBox, expo(SPAN[1]), lin(LEVEL[1]), 'boost']].forEach(([box, sMap, lMap, lName], side) => {
+  const a = knob(box, 'time', () => spans[side], v => tune(side, v, levels[side]), sMap, () => vizText(side)[0]);
+  const b = knob(box, lName, () => levels[side], v => tune(side, spans[side], v), lMap, () => vizText(side)[1]);
+  vizSync[side] = () => { a(); b(); };
+});
 
 const aboutDialog = document.getElementById('aboutDialog');
 document.getElementById('about').onclick = () => aboutDialog.showModal();
