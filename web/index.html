@@ -586,9 +586,8 @@ function drawViz(now) {
   if (fit(scope)) drawWave();
   if (fit(fall)) drawFall(dt);
 }
-// The newest `span` samples centred on a rising zero crossing (searching back), as a digital scope
-// puts its trigger mid-screen with what came before it on the left; drawn as each pixel column's
-// min and max so long spans keep their peaks. Short spans place the crossing between samples, so
+// The newest `span` samples that start on a rising zero crossing (searching back), the trigger at
+// the left edge; drawn as each pixel column's min and max so long spans keep their peaks. Short spans place the crossing between samples, so
 // the trace holds still rather than jumping a whole sample's width from frame to frame.
 // The analyser holds 32768 samples (its most), with half kept to search back for the crossing: about
 // 340 ms at 48 kHz. Longer spans read `hist`, twice the longest span, which each frame appends the
@@ -608,19 +607,18 @@ function drawWave() {
   sg.clearRect(0, 0, W, H);
   const want = Math.round(spans[0] / 1000 * sr), wave = want <= m >> 1 ? waveWin : hist, n = wave.length;
   const span = Math.min(n >> 1, want);
-  // c: the crossing, in samples, with half the span after it still in the buffer and half before it
-  // from the start; with no crossing (silence, or a sound too low for the span), the newest span.
-  const half = span >> 1;
-  let c = n - span + half;
-  for (let i = n - (span - half); i > half; i--)
+  // c: the crossing, in samples, with the whole span after it still in the buffer; with no crossing
+  // (silence, or a sound too low for the span), the newest span.
+  let c = n - span;
+  for (let i = n - span; i > 0; i--)
     if (wave[i - 1] <= 0 && wave[i] > 0) { c = i - 1 + wave[i - 1] / (wave[i - 1] - wave[i]); break; }
-  const t = Math.floor(c) - half;
+  const t = Math.floor(c);
   const gain = levels[0], yOf = v => H / 2 - Math.max(-1, Math.min(1, v * gain)) * (H / 2 - pad);
   sg.beginPath();
-  if (span <= sw) { // short spans: a line through the samples, edge to edge, sample c at the middle
-    const dx = sw / span, xc = W / 2, s0 = Math.max(0, Math.floor(c - xc / dx)), s1 = Math.min(n - 1, Math.ceil(c + xc / dx));
+  if (span <= sw) { // short spans: a line through the samples, edge to edge, sample c at the left edge
+    const dx = sw / span, s0 = Math.max(0, Math.floor(c - pad / dx)), s1 = Math.min(n - 1, Math.ceil(c + (W - pad) / dx));
     for (let i = s0; i <= s1; i++) {
-      const x = xc + (i - c) * dx, y = yOf(wave[i]);
+      const x = pad + (i - c) * dx, y = yOf(wave[i]);
       i > s0 ? sg.lineTo(x, y) : sg.moveTo(x, y);
     }
   }
