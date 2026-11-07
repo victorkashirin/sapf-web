@@ -14,35 +14,27 @@
   /* Barlow (SIL OFL, fonts/OFL.txt), latin subset */
   @font-face { font-family: Barlow; font-weight: 400; font-display: swap; src: url(fonts/barlow-400.woff2) format("woff2"); }
   @font-face { font-family: Barlow; font-weight: 600; font-display: swap; src: url(fonts/barlow-600.woff2) format("woff2"); }
+  /* Plain panels: flat greys, 1px lines, square corners. The UI in Barlow, code and console in mono. */
   :root {
     --ui: Barlow, system-ui, sans-serif;
     --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-    --text: #c8ccd2; --dim: #7d848e; --amber: #ffb454; --red: #ff7b72; --phosphor: #7ee787;
+    --text: #e2e2e2; --dim: #959595; --amber: #ffb454; --red: #ff7b72; --phosphor: #7ee787;
+    --line: #ffffff1c; --fill: #ffffff10;
   }
   * { box-sizing: border-box; }
   body {
     margin: 0; height: 100vh; height: 100dvh; display: grid; grid-template-rows: auto 1fr;
-    font: 13px var(--mono); color: var(--text);
-    /* brushed dark metal */
-    background:
-      repeating-linear-gradient(90deg, #ffffff03 0 1px, transparent 1px 3px),
-      radial-gradient(ellipse at 50% -20%, #3a3d43, #1a1c1f 70%);
-    background-color: #1a1c1f;
+    font: 13px var(--mono); color: var(--text); background: #1c1c1c;
   }
-  header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px 16px 2px; }
+  header, .tag, .settings, #controls, .pop, dialog { font-family: var(--ui); }
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px 16px 10px; }
   .brand { display: inline-flex; margin-right: 8px; }
-  /* the logo is stamped into the metal, lit from above: #deboss darkens each letter's top walls and lights its
-     bottom walls, straight up and down so nothing reads as a cast shadow. In a darkened Stop red. */
-  .logo { height: 30px; width: auto; fill: color-mix(in srgb, var(--red) 55%, #000); }
-  .gh { display: inline-flex; align-items: center; gap: 6px; color: var(--dim); text-decoration: none; font-size: 12px; }
-  .gh:hover { color: var(--text); }
+  .logo { height: 30px; width: auto; fill: var(--text); }
   #about { margin-left: auto; }
-  button.round { width: 26px; height: 26px; padding: 0; border-radius: 50%; color: var(--dim); }
 
   dialog {
-    max-width: min(520px, calc(100vw - 32px)); padding: 0; border: 0; border-radius: 12px; color: var(--text);
-    background: linear-gradient(#2e3136, #222428);
-    box-shadow: inset 0 1px 0 #ffffff14, inset 0 -1px 0 #0006, 0 20px 50px #000c;
+    max-width: min(520px, calc(100vw - 32px)); padding: 0; border: 0; color: var(--text);
+    background: #2c2c2c; box-shadow: 0 0 0 1px var(--line), 0 8px 24px #0008;
   }
   dialog > div { padding: 10px 18px 16px; line-height: 1.55; }
   dialog::backdrop { background: #000a; backdrop-filter: blur(2px); }
@@ -52,48 +44,39 @@
   dialog .keys td:first-child { color: var(--amber); padding-right: 16px; white-space: nowrap; }
   dialog .actions { text-align: right; margin-bottom: 0; }
 
-  /* plastic keycaps */
+  /* buttons: plain text, a faint fill on hover. Longhands, not `font`, which would reset button.icon's line-height: 0. */
   button, .btn {
-    font: 12px var(--ui); text-transform: uppercase; color: #d6d9de; padding: 5px 12px; cursor: pointer;
-    border: 1px solid #0009; border-radius: 5px;
-    background: linear-gradient(#4a4e55, #33363b);
-    box-shadow: inset 0 1px 0 #ffffff26, 0 2px 0 #131518, 0 3px 6px #0007;
+    font-family: var(--ui); font-size: 13px; color: var(--text); padding: 4px 10px; cursor: pointer;
+    border: 0; border-radius: 0; background: transparent;
   }
-  button:hover, .btn:hover { background: linear-gradient(#52565e, #383b41); }
-  button:active, .btn:active { transform: translateY(2px); background: linear-gradient(#36393e, #303338); box-shadow: inset 0 1px 2px #0008, 0 0 0 #131518; }
+  button:hover, .btn:hover, details[open] > .btn { background: var(--fill); }
+  button:active { background: #ffffff18; }
+  #stop { color: var(--red); }
   #runs { display: none; gap: 4px; } /* keyboards have the Enter keys */
-  #runs button { padding: 6px 14px; font-size: 11px; letter-spacing: .1em; color: var(--amber); } /* finger-sized */
   @media (pointer: coarse) { #runs { display: flex; } }
   .toggles { display: inline-flex; gap: 6px; } /* wrap together */
   .break { display: none; } /* the mobile header's row break */
-  button.icon { padding: 4px 8px; line-height: 0; color: var(--dim); }
+  button.icon { line-height: 0; color: var(--dim); }
   button.icon svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
   button.icon[aria-pressed="true"], button.icon[aria-expanded="true"] { color: var(--phosphor); }
-  button.icon[aria-pressed="true"] svg, button.icon[aria-expanded="true"] svg { filter: drop-shadow(0 0 3px #7ee78799); }
 
-  /* File menu: a <details> dropdown */
+  /* File and Sounds menus: <details> dropdowns */
   .menu { position: relative; }
   .menu summary { list-style: none; }
   .menu summary::-webkit-details-marker { display: none; }
-  .menu summary { padding-right: 10px; }
   .menu summary::after { content: "▾"; margin-left: 7px; color: var(--dim); }
   .menu .pop {
     position: absolute; z-index: 10; top: calc(100% + 8px); left: 0; width: 260px; max-height: 70vh; overflow: auto;
-    padding: 6px; border-radius: 8px; background: linear-gradient(#2e3136, #222428);
-    box-shadow: inset 0 1px 0 #ffffff14, 0 14px 34px #000c, 0 0 0 1px #000;
-    font: 13px var(--ui); /* one font for the whole menu */
+    padding: 6px; background: #2c2c2c; box-shadow: 0 0 0 1px var(--line), 0 8px 24px #0008; font-size: 13px;
   }
   .pop .row { display: flex; gap: 6px; padding: 2px 0 6px; }
-  .pop input {
-    flex: 1; min-width: 0; font: inherit; color: var(--text); padding: 4px 8px; border: 0; border-radius: 4px;
-    background: #121417; box-shadow: inset 0 1px 3px #000;
-  }
+  .pop input { flex: 1; min-width: 0; font: inherit; color: var(--text); padding: 4px 8px; }
+  .pop input, .settings select { border: 0; border-radius: 0; background: #1c1c1c; box-shadow: inset 0 0 0 1px var(--line); }
   .pop .item, .pop .del {
-    display: block; width: 100%; text-align: left; padding: 5px 8px; border: 0; border-radius: 4px; font: inherit;
-    background: none; box-shadow: none; transform: none; text-transform: none; color: var(--text); text-shadow: none;
+    display: block; width: 100%; text-align: left; padding: 5px 8px; font: inherit; color: var(--text);
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
-  .pop .item:hover, .pop .item:focus-visible { background: #ffffff10; color: var(--amber); }
+  .pop .item:hover, .pop .item:focus-visible { background: var(--fill); color: var(--amber); }
   .pop .item.cur { color: var(--amber); }
   .pop .file { display: flex; align-items: center; }
   .pop .ch { flex: none; color: var(--dim); font-size: 11px; padding: 0 4px 0 8px; }
@@ -102,127 +85,115 @@
   .pop .del:hover, .pop .del:focus-visible { background: none; color: var(--red); }
   .pop .play { width: 24px; padding: 5px 0 5px 6px; text-align: center; } /* fixed width: ▶ and ■ differ, and the name must not shift */
   .pop .play:hover, .pop .play:focus-visible, .pop .play.on { color: var(--amber); }
-  .pop .tag { font-size: 10px; font-weight: 600; letter-spacing: .08em; padding: 10px 8px 4px; margin-top: 4px; border-top: 1px solid #ffffff0d; }
   .pop .none { color: var(--dim); padding: 5px 8px; }
   #fileList .item, #soundList .item, .pop .none, .pop [data-example], .pop .prelude { padding-left: 18px; } /* entries under a heading */
-  .pop .hint { color: var(--dim); font-size: 11px; padding: 8px 8px 2px; border-top: 1px solid #ffffff0d; margin-top: 4px; }
-  #fileLabel { color: var(--dim); letter-spacing: .1em; text-transform: none; }
-  #clearLog { padding: 1px 8px; font-size: 10px; letter-spacing: .1em; color: var(--dim); }
-  /* title strip: name, then its buttons at the right end, the cog last */
-  .panel > .tag { display: flex; align-items: center; gap: .5em; white-space: nowrap; }
-  #fileLabel { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-  #runs, #clearLog, .cog { margin: -4px 0 -2px auto; } /* the strip pads 2px above, 6px below: this centres them between the bezel and the screen */
+  .pop .hint { color: var(--dim); font-size: 11px; padding: 8px 8px 2px; border-top: 1px solid var(--line); margin-top: 4px; }
+
+  /* labels: panel titles, menu and dialog headings */
+  .tag { font-size: 12px; letter-spacing: .02em; text-transform: lowercase; color: var(--dim); padding: 2px 4px 6px; }
+  .pop .tag { font-size: 10px; font-weight: 600; letter-spacing: .08em; padding: 10px 8px 4px; margin-top: 4px; border-top: 1px solid var(--line); }
+
+  /* a panel's title strip: name, then its buttons at the right end, the cog last. Barlow sits low in its line, so the
+     label is lifted 1.5px (4.5px above, 7.5px below) and the buttons' margins keep them centred. The cog's icon is 8px
+     from the right edge, as the label is from the left: 3px strip padding, then a square button with 5px of its own. */
+  .panel > .tag { display: flex; align-items: center; gap: .5em; white-space: nowrap; padding: 4.5px 3px 7.5px 8px; border-bottom: 1px solid var(--line); }
+  #fileLabel { color: var(--dim); letter-spacing: .1em; text-transform: none; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  #runs, #clearLog, .cog { margin: -1.5px 0 -4.5px auto; }
   #clearLog + .cog { margin-left: 0; }
-  @media (pointer: coarse) { #runs + .cog { margin-left: 0; } button.cog { padding: 6.5px 10px; } } /* as tall as the finger-sized Run buttons */
-  button.cog { padding: 1px 5px; } /* as tall as Clear beside it */
+  @media (pointer: coarse) { #runs + .cog { margin-left: 0; } }
+  /* Clear and the touch Run buttons: lowercase like the label, lifted 1.5px the same way; all strip buttons one height */
+  .panel > .tag button { height: 22px; padding: 0 8px 3px; font-size: 12px; text-transform: lowercase; }
+  #runs button { color: var(--amber); }
+  #clearLog { color: var(--dim); }
+  #clearLog:hover { color: var(--text); }
+  .panel > .tag .cog { width: 22px; padding: 0 5px; }
+  .cog[aria-expanded="false"] { color: var(--dim); } /* muted like the labels; green while its settings are open */
+  .cog[aria-expanded="false"]:hover { color: var(--text); }
   button.cog svg { width: 12px; height: 12px; }
+  @media (pointer: coarse), (max-width: 760px) { /* finger-sized */
+    .panel > .tag { padding-right: 0; }
+    .panel > .tag button { height: 28px; }
+    .panel > .tag .cog { width: 28px; padding: 0 8px; }
+  }
+
   /* a panel's settings: a strip above its screen, so changes show beside it rather than under a popup */
-  .settings { display: flex; flex-wrap: wrap; gap: 0 16px; padding: 0 4px 8px; font: 12px var(--ui); }
+  .settings { display: flex; flex-wrap: wrap; gap: 0 16px; padding: 8px; border-bottom: 1px solid var(--line); font-size: 12px; }
   .settings label { flex: 1 1 15em; display: grid; grid-template-columns: 4.5em minmax(3em, 1fr) 4.5em; gap: 8px; align-items: center; }
   .settings span { color: var(--dim); }
   .settings output { color: var(--amber); text-align: right; font-variant-numeric: tabular-nums; }
-  .settings select { grid-column: span 2; font: inherit; color: var(--text); padding: 3px 6px; border: 0; border-radius: 4px; background: #121417; box-shadow: inset 0 1px 3px #000; }
-  #stop { color: var(--red); }
+  .settings select { grid-column: span 2; font: inherit; color: var(--text); padding: 3px 6px; }
 
-  /* LED toggle */
-  .led { display: inline-flex; align-items: center; gap: 6px; color: var(--dim); font-size: 12px; cursor: pointer; user-select: none;
-    position: relative; top: 1px; /* center on the keycaps as they look, with their 2px bottom shadow */ }
-  .led input {
-    appearance: none; margin: 0; width: 9px; height: 9px; border-radius: 50%; cursor: pointer;
-    background: #1d2a20; box-shadow: inset 0 1px 2px #000, 0 1px 0 #ffffff14;
-  }
-  .led input:checked { background: var(--phosphor); box-shadow: 0 0 6px var(--phosphor), inset 0 -1px 2px #0005; }
+  /* Solo: an LED toggle */
+  .led { display: inline-flex; align-items: center; gap: 6px; color: var(--dim); cursor: pointer; user-select: none; }
+  .led input { appearance: none; margin: 0; width: 9px; height: 9px; cursor: pointer; background: #454545; }
+  .led input:checked { background: var(--phosphor); }
   :focus-visible { outline: 1px solid var(--amber); outline-offset: 2px; }
+  :is(input:not([type=checkbox], [type=range]), select):focus { outline-offset: -1px; } /* a field's focus ring replaces its 1px edge, flush */
 
-  /* Tiles: each splits in two, side by side (.row) or stacked (.col); --a/--b are the halves' shares, set by dragging the splitter */
+  /* Tiles: each splits in two, side by side (.row) or stacked (.col); --a/--b are the halves' shares, set by dragging the splitter.
+     Panels sit edge to edge, split by a 1px line whose grab area reaches 4px either side over the panels. */
   main, .tile { display: grid; grid-template: minmax(0, 1fr) / minmax(0, 1fr); min-width: 0; min-height: 0; }
-  main { padding: 12px 16px 16px; }
-  .tile.row { grid-template-columns: minmax(0, var(--a)) 14px minmax(0, var(--b)); }
-  .tile.col { grid-template-rows: minmax(0, var(--a)) 14px minmax(0, var(--b)); }
+  main { border-top: 1px solid var(--line); }
+  .tile.row { grid-template-columns: minmax(0, var(--a)) 1px minmax(0, var(--b)); }
+  .tile.col { grid-template-rows: minmax(0, var(--a)) 1px minmax(0, var(--b)); }
+  .split { position: relative; z-index: 5; background: var(--line); cursor: col-resize; touch-action: none; }
+  .split.row { height: 1px; cursor: row-resize; }
+  .split::before { content: ""; position: absolute; inset: 0 -4px; }
+  .split.row::before { inset: -4px 0; }
+  @media (pointer: coarse) { .split::before { inset: 0 -8px; } .split.row::before { inset: -8px 0; } } /* finger-sized */
+  .split:hover, .split.drag { background: var(--amber); }
   /* a panel's title strip is its handle: drop it on another panel's edge to split there, on its middle to swap */
   .panel > .tag { cursor: grab; touch-action: none; user-select: none; }
   .panel.dragging { opacity: .45; }
   .panel.dragging > .tag { cursor: grabbing; }
-  #drop { position: fixed; z-index: 20; pointer-events: none; border-radius: 12px; border: 2px solid var(--amber); background: #ffb4541a; box-shadow: 0 0 16px #ffb45433; }
-  /* splitter with an engraved grip */
-  .split { display: flex; align-items: center; justify-content: center; cursor: col-resize; touch-action: none; }
-  .split::before { content: ""; width: 7px; height: 32px; background: repeating-linear-gradient(90deg, #000b 0 1px, #ffffff18 1px 2px, transparent 2px 3px); }
-  .split:hover::before, .split.drag::before { background: repeating-linear-gradient(90deg, #000b 0 1px, #ffb45466 1px 2px, transparent 2px 3px); }
-  /* raised plastic bezel */
-  .panel {
-    display: flex; flex-direction: column; min-height: 0; padding: 6px 10px 10px; border-radius: 12px;
-    background: linear-gradient(#2e3136, #222428);
-    box-shadow: inset 0 1px 0 #ffffff14, inset 0 -1px 0 #0006, 0 1px 0 #ffffff0a, 0 12px 28px #0009;
-  }
-  .tag { font-size: 10px; letter-spacing: .25em; text-transform: uppercase; color: #6b717a; padding: 2px 4px 6px; }
-  /* recessed screen */
-  .screen {
-    flex: 1; min-height: 0; overflow: hidden; border-radius: 6px; background: #121417;
-    box-shadow: inset 0 2px 8px #000c, inset 0 0 0 1px #000, 0 1px 0 #ffffff14;
-  }
+  #drop { position: fixed; z-index: 20; pointer-events: none; border: 2px solid var(--amber); background: #ffb4541a; }
+  [hidden] { display: none !important; } /* over .panel's display: flex */
 
+  /* the editor sits on the panel; the console, scope and spectrum on a darker screen */
+  .panel { display: flex; flex-direction: column; min-height: 0; background: #262626; }
+  .screen { flex: 1; min-height: 0; overflow: hidden; }
+  #log, canvas.screen { background: #141414; }
   #log {
     margin: 0; padding: 10px 12px; overflow: auto; white-space: pre-wrap; word-break: break-word;
-    font: var(--log-size, 13px)/1.45 var(--mono); color: var(--phosphor); text-shadow: 0 0 5px #7ee78755;
-    background:
-      repeating-linear-gradient(0deg, #00000038 0 1px, transparent 1px 3px),
-      radial-gradient(ellipse at center, #0e1611, #070a08 85%);
+    font: var(--log-size, 13px)/1.45 var(--mono);
   }
-  [hidden] { display: none !important; } /* over .panel's and .split's display: flex */
-  .split.row { height: 14px; cursor: row-resize; }
-  .split.row::before { width: 32px; height: 7px; background: repeating-linear-gradient(#000b 0 1px, #ffffff18 1px 2px, transparent 2px 3px); }
-  .split.row:hover::before, .split.row.drag::before { background: repeating-linear-gradient(#000b 0 1px, #ffb45466 1px 2px, transparent 2px 3px); }
   /* flex-basis 0: the canvas fills its panel, never sized by its own pixel buffer */
-  canvas.screen { display: block; flex: 1 1 0; width: 100%;
-    background: repeating-linear-gradient(0deg, #00000038 0 1px, transparent 1px 3px), radial-gradient(ellipse at center, #0e1611, #070a08 85%); }
-  #log .in { color: var(--amber); text-shadow: 0 0 5px #ffb45444; }
-  #log .err { color: var(--red); text-shadow: 0 0 5px #ff7b7244; }
-  #log .dim { color: #4f7d5a; text-shadow: none; }
+  canvas.screen { display: block; flex: 1 1 0; width: 100%; }
+  #log .in { color: var(--amber); }
+  #log .err { color: var(--red); }
+  #log .dim { color: var(--dim); }
   #log a { color: var(--amber); }
   #log::after { content: "▋"; animation: blink 1s steps(1) infinite; }
   @keyframes blink { 50% { opacity: 0; } }
 
-  /* sliders: recessed track, plastic fader cap */
-  #controls { padding: 2px 4px 10px; flex: none; max-height: 50%; overflow-y: auto; } /* many sliders scroll, the console keeps half */
+  /* sliders: a thin track, a square cap */
+  #controls { padding: 4px 8px; border-bottom: 1px solid var(--line); flex: none; max-height: 50%; overflow-y: auto; } /* many sliders scroll, the console keeps half */
   #controls:empty { display: none; }
   #controls label { display: grid; grid-template-columns: 7em 1fr 5em; gap: 10px; align-items: center; margin: 6px 0; }
   #controls span { color: var(--dim); overflow: hidden; text-overflow: ellipsis; }
   #controls output { color: var(--amber); text-align: right; font-variant-numeric: tabular-nums; }
   input[type=range] { appearance: none; background: none; height: 22px; margin: 0; }
-  input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: #0b0c0e; box-shadow: inset 0 1px 2px #000, 0 1px 0 #ffffff12; }
-  input[type=range]::-moz-range-track { height: 4px; border-radius: 2px; background: #0b0c0e; box-shadow: inset 0 1px 2px #000, 0 1px 0 #ffffff12; }
-  input[type=range]::-webkit-slider-thumb {
-    appearance: none; width: 12px; height: 20px; margin-top: -8px; border-radius: 3px; border: 1px solid #000a;
-    background: linear-gradient(90deg, transparent 5px, #111 5px 6px, transparent 6px), linear-gradient(#61666e, #383b41);
-    box-shadow: inset 0 1px 0 #ffffff30, 0 2px 4px #000a;
-  }
-  input[type=range]::-moz-range-thumb {
-    width: 12px; height: 20px; border-radius: 3px; border: 1px solid #000a;
-    background: linear-gradient(90deg, transparent 5px, #111 5px 6px, transparent 6px), linear-gradient(#61666e, #383b41);
-    box-shadow: inset 0 1px 0 #ffffff30, 0 2px 4px #000a;
-  }
+  input[type=range]::-webkit-slider-runnable-track { height: 2px; background: #4a4a4a; }
+  input[type=range]::-moz-range-track { height: 2px; background: #4a4a4a; }
+  input[type=range]::-webkit-slider-thumb { appearance: none; width: 10px; height: 10px; margin-top: -4px; border: 0; border-radius: 0; background: var(--text); }
+  input[type=range]::-moz-range-thumb { width: 10px; height: 10px; border: 0; border-radius: 0; background: var(--text); }
 
   @media (max-width: 760px) {
-    main { padding: 10px 16px 16px; }
     .panel > .tag { cursor: auto; touch-action: auto; } /* the narrow layout is fixed: nothing to drag */
-    #clearLog { padding: 6px 14px; font-size: 11px; } /* finger-sized */
-    #runs, #clearLog, .cog { margin-top: -3px; margin-bottom: -1px; }
-    button.cog { padding: 6.5px 10px; } /* as tall as the finger-sized Clear */
     .settings label { grid-template-columns: 3.2em minmax(2em, 1fr) 4em; gap: 6px; }
     /* two rows: brand, menus and view toggles; then the transport (Stop and Add control share the
-       spare width, up to 10em each), the Solo LED and ?. `order` moves the toggles up; GitHub is in About. */
-    header { padding: 10px 16px 2px; gap: 10px 6px; }
+       spare width, up to 10em each), the Solo LED and ?. `order` moves the toggles up */
+    header { padding: 10px 16px; gap: 10px 6px; }
     .brand { margin-right: 0; }
-    .gh { display: none; }
     .toggles { margin-left: auto; }
     .break { display: block; flex-basis: 100%; order: 1; }
     #stop, #addSlider, .led, #about { order: 2; }
     #stop, #addSlider { flex: 1 1 auto; max-width: 10em; white-space: nowrap; }
   }
-  @media (max-width: 360px) { #runs button { padding: 6px 9px; } } /* 320px phones: one strip, two header rows */
+  @media (max-width: 360px) { .panel > .tag #runs button { padding-left: 5px; padding-right: 5px; } } /* 320px phones: one strip */
 </style>
 <header>
-  <span class="brand"><svg class="logo" viewBox="0 0 63 63" role="img" aria-label="sapf"><filter id="deboss" x="-5%" y="-5%" width="110%" height="110%"><feComponentTransfer in="SourceAlpha" result="out"><feFuncA type="table" tableValues="1 0"/></feComponentTransfer><feOffset in="out" dy="1.6" result="d"/><feComposite in="d" in2="SourceAlpha" operator="in" result="top"/><feColorMatrix in="top" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .8 0" result="dark"/><feOffset in="out" dy="-1.2" result="u"/><feComposite in="u" in2="SourceAlpha" operator="in" result="bot"/><feColorMatrix in="bot" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .22 0" result="light"/><feMerge><feMergeNode in="SourceGraphic"/><feMergeNode in="dark"/><feMergeNode in="light"/></feMerge></filter><path filter="url(#deboss)" fill-rule="evenodd" d="M0 0 30 0 30 6 22 6 22 12 30 12 30 30 0 30 0 24 8 24 8 18 0 18ZM36 0 63 0 63 30 52 30 52 18 44 18 44 30 33 30 33 6 36 6ZM44 6 44 12 52 12 52 6ZM0 33 30 33 30 51 22 51 22 63 0 63ZM33 33 63 33 63 39 55 39 55 45 63 45 63 51 55 51 55 63 33 63ZM11 39 11 45 19 45 19 39Z"/></svg></span>
+  <span class="brand"><svg class="logo" viewBox="0 0 63 63" role="img" aria-label="sapf"><path fill-rule="evenodd" d="M0 0 30 0 30 6 22 6 22 12 30 12 30 30 0 30 0 24 8 24 8 18 0 18ZM36 0 63 0 63 30 52 30 52 18 44 18 44 30 33 30 33 6 36 6ZM44 6 44 12 52 12 52 6ZM0 33 30 33 30 51 22 51 22 63 0 63ZM33 33 63 33 63 39 55 39 55 45 63 45 63 51 55 51 55 63 33 63ZM11 39 11 45 19 45 19 39Z"/></svg></span>
   <details class="menu" id="fileMenu">
     <summary class="btn">File</summary>
     <div class="pop">
@@ -255,8 +226,7 @@
   <span class="toggles"><button id="showScope" class="icon" aria-pressed="true" title="Show or hide the scope" aria-label="Scope"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1 8Q3.5 1 6 8T11 8T16 8"/></svg></button>
   <button id="showFall" class="icon" aria-pressed="true" title="Show or hide the spectrum" aria-label="Spectrum"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 14V9M5.5 14V4M8.5 14V7M11.5 14V2M14.5 14V10"/></svg></button></span>
   <label class="led" title="Solo: running code that plays stops the current sound first, so only the new one plays. Turn off to layer sounds."><input type="checkbox" id="replace" checked> Solo</label>
-  <button id="about" class="round" title="About" aria-label="About">?</button>
-  <a class="gh" href="https://github.com/victorkashirin/sapf-web"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a>
+  <button id="about" title="About" aria-label="About">?</button>
 </header>
 <dialog id="aboutDialog">
   <div>
@@ -661,11 +631,7 @@ function drawWave() {
     x ? sg.lineTo(pad + x, yOf(mx)) : sg.moveTo(pad, yOf(mx));
     if (mn !== mx) sg.lineTo(pad + x, yOf(mn));
   }
-  // glow: a wide faint halo, then the bright core with a small blur; the path is built once
-  sg.lineJoin = 'round'; sg.strokeStyle = '#7ee787';
-  sg.lineWidth = 6 * devicePixelRatio; sg.globalAlpha = .12; sg.stroke();
-  sg.lineWidth = 1.5 * devicePixelRatio; sg.globalAlpha = 1; sg.shadowColor = '#7ee787'; sg.shadowBlur = 8 * devicePixelRatio; sg.stroke();
-  sg.shadowBlur = 0;
+  sg.lineJoin = 'round'; sg.strokeStyle = '#7ee787'; sg.lineWidth = 1.5 * devicePixelRatio; sg.stroke();
 }
 // Each frame folds the spectrum into rowMax (the loudest bin per pixel row, the loudest frame
 // since the last column), and w / spans[1] columns a second scroll in at the right.
@@ -987,7 +953,7 @@ const tree = () => stacked.matches ? narrow : layout;
 const saveLayout = () => { store.set('layout', JSON.stringify(layout)); store.set('layoutNarrow2', JSON.stringify(narrow)); };
 ['split', 'scopeH', 'layoutNarrow'].forEach(store.del); // old settings: fixed splitters, the editor-first phone stack
 const shown = n => typeof n === 'string' ? !panels[n].hidden : shown(n.a) || shown(n.b);
-const MIN = 72, BAR = 14; // px a panel keeps (its title strip and some screen); a splitter's thickness (.tile's 14px)
+const MIN = 72, BAR = 1; // px a panel keeps (its title strip and some screen); a splitter's thickness (.tile's 1px)
 // The px a subtree needs along a split's axis: panels in line add up with their splitters, panels across take the most.
 const need = (n, vert) => typeof n === 'string' ? (panels[n].hidden ? 0 : MIN) :
   !shown(n.a) ? need(n.b, vert) : !shown(n.b) ? need(n.a, vert) :
