@@ -39,7 +39,8 @@
   dialog > div { padding: 10px 18px 16px; line-height: 1.55; }
   dialog::backdrop { background: #000a; backdrop-filter: blur(2px); }
   dialog a { color: var(--amber); }
-  dialog .keys { border-spacing: 0; margin: 0 0 1em 4px; }
+  dialog .tag { padding-left: 0; padding-right: 0; } /* flush with the text */
+  dialog .keys { border-spacing: 0; margin: 0 0 1em; }
   dialog .keys td { padding: 1px 0; }
   dialog .keys td:first-child { color: var(--amber); padding-right: 16px; white-space: nowrap; }
   dialog .actions { text-align: right; margin-bottom: 0; }
@@ -152,7 +153,11 @@
   /* the editor sits on the panel; the console, scope and spectrum on a darker screen */
   .panel { display: flex; flex-direction: column; min-height: 0; background: #262626; }
   .screen { flex: 1; min-height: 0; overflow: hidden; }
-  #log, canvas.screen { background: #141414; }
+  #log, #help, canvas.screen { background: #141414; }
+  #help { padding: 4px 12px 10px; overflow: auto; font: var(--help-size, 13px)/1.45 var(--mono); }
+  #help h3 { margin: 12px 0 4px; font: inherit; color: var(--amber); }
+  #help div { margin-bottom: 6px; }
+  #help code { color: var(--phosphor); }
   #log {
     margin: 0; padding: 10px 12px; overflow: auto; white-space: pre-wrap; word-break: break-word;
     font: var(--log-size, 13px)/1.45 var(--mono);
@@ -223,7 +228,9 @@
   </details>
   <button id="stop">Stop</button><button id="addSlider">Add control</button>
   <span class="break" aria-hidden="true"></span>
-  <span class="toggles"><button id="showScope" class="icon" aria-pressed="true" title="Show or hide the scope" aria-label="Scope"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1 8Q3.5 1 6 8T11 8T16 8"/></svg></button>
+  <span class="toggles"><button id="showConsole" class="icon" aria-pressed="true" title="Show or hide the console" aria-label="Console"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4l4 4-4 4M8.5 12h5"/></svg></button>
+  <button id="showHelp" class="icon" aria-pressed="false" title="Show or hide the help: every word with its docs, as helpall prints them" aria-label="Help"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5"/><path d="M6 6.3a2 2 0 1 1 2.8 1.8c-.6.3-.8.7-.8 1.3M8 11.7v.1"/></svg></button>
+  <button id="showScope" class="icon" aria-pressed="true" title="Show or hide the scope" aria-label="Scope"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1 8Q3.5 1 6 8T11 8T16 8"/></svg></button>
   <button id="showFall" class="icon" aria-pressed="true" title="Show or hide the spectrum" aria-label="Spectrum"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 14V9M5.5 14V4M8.5 14V7M11.5 14V2M14.5 14V10"/></svg></button></span>
   <label class="led" title="Solo: running code that plays stops the current sound first, so only the new one plays. Turn off to layer sounds."><input type="checkbox" id="replace" checked> Solo</label>
   <button id="about" title="About" aria-label="About">?</button>
@@ -252,10 +259,11 @@
   </div>
 </dialog>
 <main>
-  <section class="panel" data-panel="editor"><div class="tag">editor <span id="fileLabel"></span><span id="runs"><button data-run="line" title="Run the selection or the line (Mod+Enter)">Line</button><button data-run="block" title="Run the selection or the ( ) block around the cursor (Shift+Enter)">Block</button><button data-run="paragraph" title="Run the selection or the paragraph (Mod+Shift+Enter)">Para</button></span><button class="icon cog" title="Settings" aria-label="Editor settings" aria-expanded="false"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"/><circle cx="8" cy="8" r="4.3"/></svg></button></div><div class="settings" hidden><label><span>theme</span><select id="theme"><option value="amber">amber</option><option value="phosphor">phosphor</option><option value="contrast">high contrast</option><option value="plain">plain</option></select></label></div><div class="screen" id="code"></div></section>
+  <section class="panel" data-panel="editor"><div class="tag">editor <span id="fileLabel"></span><span id="runs"><button data-run="line" title="Run the selection or the line (Mod+Enter)">Line</button><button data-run="block" title="Run the selection or the ( ) block around the cursor (Shift+Enter)">Block</button><button data-run="paragraph" title="Run the selection or the paragraph (Mod+Shift+Enter)">Para</button></span><button class="icon cog" title="Settings" aria-label="Editor settings" aria-expanded="false"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"/><circle cx="8" cy="8" r="4.3"/></svg></button></div><div class="settings" hidden><label><span>theme</span><select id="theme"><option value="amber">amber</option><option value="phosphor">phosphor</option><option value="contrast">high contrast</option><option value="plain">plain</option><option value="monokai">monokai</option><option value="dracula">dracula</option><option value="nord">nord</option><option value="gruvbox">gruvbox</option><option value="solarized">solarized dark</option><option value="tokyo">tokyo night</option></select></label></div><div class="screen" id="code"></div></section>
   <section class="panel" data-panel="console"><div class="tag">console <button id="clearLog" title="Clear console (Mod+K)">Clear</button><button class="icon cog" title="Settings" aria-label="Console settings" aria-expanded="false"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"/><circle cx="8" cy="8" r="4.3"/></svg></button></div><div class="settings" hidden></div><div id="controls"></div><pre class="screen" id="log"></pre></section>
   <section class="panel" data-panel="scope"><div class="tag">scope<button class="icon cog" title="Settings" aria-label="Scope settings" aria-expanded="false"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"/><circle cx="8" cy="8" r="4.3"/></svg></button></div><div class="settings" hidden></div><canvas class="screen" id="scope" role="img" aria-label="Oscilloscope of the output"></canvas></section>
   <section class="panel" data-panel="fall"><div class="tag">spectrum<button class="icon cog" title="Settings" aria-label="Spectrum settings" aria-expanded="false"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"/><circle cx="8" cy="8" r="4.3"/></svg></button></div><div class="settings" hidden></div><canvas class="screen" id="fall" role="img" aria-label="Spectrogram of the output"></canvas></section>
+  <section class="panel" data-panel="help"><div class="tag">help<button class="icon cog" title="Settings" aria-label="Help settings" aria-expanded="false"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"/><circle cx="8" cy="8" r="4.3"/></svg></button></div><div class="settings" hidden></div><div class="screen" id="help"></div></section>
 </main>
 <div id="drop" hidden></div>
 <script type="text/plain" id="example">; Welcome to SAPF (Sound As Pure Form), a stack language for sound.
@@ -314,7 +322,7 @@ print(`; keys (Mod = Cmd/Ctrl)
 ; current sound before code that plays.
 `, 'dim');
 import createSapf from './build/sapf.mjs';
-import { createEditor, lineAt, blockAt, paragraphAt, playsSound } from './build/editor.js';
+import { createEditor, lineAt, blockAt, paragraphAt, playsSound, docs } from './build/editor.js';
 
 // Code is evaluated on a wasm pthread and audio renders in a Wasm Audio Worklet; both share
 // memory, which needs cross-origin isolation (serve with web/serve.py).
@@ -934,12 +942,13 @@ const panels = Object.fromEntries([...main.children].map(p => [p.dataset.panel, 
 // resizable shares; panels move only on wide ones. The console is on top so the on-screen keyboard,
 // which covers the bottom while typing, never hides the output.
 const stacked = matchMedia('(max-width: 760px)');
-const WIDE = { dir: 'row', f: .5, a: 'editor', b: { dir: 'col', f: .72, a: 'console', b: { dir: 'row', f: .5, a: 'scope', b: 'fall' } } };
-const NARROW = { dir: 'col', f: .3, a: 'console', b: { dir: 'col', f: .7, a: 'editor', b: { dir: 'row', f: .5, a: 'scope', b: 'fall' } } };
+const WIDE = { dir: 'row', f: .5, a: { dir: 'row', f: .6, a: 'editor', b: 'help' }, b: { dir: 'col', f: .72, a: 'console', b: { dir: 'row', f: .5, a: 'scope', b: 'fall' } } };
+const NARROW = { dir: 'col', f: .3, a: { dir: 'col', f: .5, a: 'console', b: 'help' }, b: { dir: 'col', f: .7, a: 'editor', b: { dir: 'row', f: .5, a: 'scope', b: 'fall' } } };
 const leaves = n => typeof n === 'string' ? [n] : [...leaves(n.a), ...leaves(n.b)];
 function loadLayout(key, fallback) {
   try {
-    const n = JSON.parse(store.get(key));
+    let n = JSON.parse(store.get(key));
+    if (!leaves(n).includes('help')) n = { dir: fallback === WIDE ? 'row' : 'col', f: .7, a: n, b: 'help' }; // saved before the help panel existed
     if (leaves(n).sort().join() === Object.keys(panels).sort().join()) return n;
   } catch {} // missing or malformed
   return structuredClone(fallback);
@@ -1072,8 +1081,8 @@ for (const [id, p] of Object.entries(panels)) {
     };
   };
 }
-// Header buttons show or hide the scope and spectrum; a hidden panel keeps its place in the layout.
-const vizPanels = { showScope: panels.scope, showFall: panels.fall };
+// Header buttons show or hide the console, help, scope and spectrum; a hidden panel keeps its place in the layout.
+const vizPanels = { showConsole: panels.console, showHelp: panels.help, showScope: panels.scope, showFall: panels.fall };
 const setViz = (id, on) => {
   vizPanels[id].hidden = !on;
   document.getElementById(id).setAttribute('aria-pressed', on);
@@ -1082,8 +1091,18 @@ const setViz = (id, on) => {
   wire();
 };
 for (const id in vizPanels) {
-  setViz(id, store.get(id) !== '0');
+  setViz(id, (store.get(id) ?? (id === 'showHelp' ? '0' : '1')) !== '0'); // help starts hidden
   document.getElementById(id).onclick = () => setViz(id, vizPanels[id].hidden);
+}
+
+// The help panel: every word with its docs, by category, as `helpall` prints them (build/sapf-docs.json).
+const help = panels.help.querySelector('#help'); // out of the page while hidden
+for (let i = 0, d; d = docs[i]; i++) {
+  if (d.category !== docs[i - 1]?.category) help.append(Object.assign(document.createElement('h3'), { textContent: d.category }));
+  const e = document.createElement('div'), sig = document.createElement('code');
+  sig.textContent = [d.name, d.special && '@' + d.special, d.sig].filter(Boolean).join(' ');
+  e.append(sig, document.createElement('br'), d.desc);
+  help.append(e);
 }
 
 // Panel settings: the cog in a title strip shows or hides the strip of settings above its screen.
@@ -1111,13 +1130,14 @@ function fontKnob(box, key, el, prop, def, after) {
   apply();
   knob(box, 'size', () => v, x => { v = Math.round(x); apply(); store.set(key, v); }, lin([9, 28]), v => v + ' px');
 }
-const [codeBox, logBox, scopeBox, fallBox] = ['editor', 'console', 'scope', 'fall'].map(k => panels[k].querySelector('.settings'));
+const [codeBox, logBox, scopeBox, fallBox, helpBox] = ['editor', 'console', 'scope', 'fall', 'help'].map(k => panels[k].querySelector('.settings'));
 fontKnob(codeBox, 'codeSize', document.getElementById('code'), '--code-size', 14, () => editor.requestMeasure());
 codeBox.prepend(codeBox.lastChild); // size before theme
 fontKnob(logBox, 'logSize', log, '--log-size', 13);
+fontKnob(helpBox, 'helpSize', help, '--help-size', 13);
 const theme = document.getElementById('theme');
-theme.value = store.get('theme') ?? 'amber';
-if (!theme.value) theme.value = 'amber'; // a theme no longer offered
+theme.value = store.get('theme') ?? 'contrast';
+if (!theme.value) theme.value = 'contrast'; // a theme no longer offered
 editor.setTheme(theme.value);
 theme.onchange = () => { editor.setTheme(theme.value); store.set('theme', theme.value); };
 KEYS.forEach(([sk, lk], i) => {

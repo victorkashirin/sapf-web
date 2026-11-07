@@ -8,7 +8,7 @@ import { tags as t } from '@lezer/highlight';
 import { completionStatus } from '@codemirror/autocomplete';
 import docs from './build/sapf-docs.json';
 import { lineAt, blockAt, paragraphAt, formatSapf, playsSound } from './sapf-text.mjs';
-export { lineAt, blockAt, paragraphAt, playsSound }; // for the page's run buttons and Solo
+export { lineAt, blockAt, paragraphAt, playsSound, docs }; // for the page's run buttons, Solo and help panel
 
 const byName = new Map(docs.map(d => [d.name, d]));
 const WORD = /[^\s()[\]{}";]/; // sapf words include operators: + *, >sf, sf>, +/ ...
@@ -207,4 +207,11 @@ export const themes = {
   phosphor: style('#7ee787', '#b4f0b8', '#a8e6a3', '#3f6a49', '#9fe0a0', '#7ee787', '#4f7d5a', '#d2f7cf', '#9fcfa4'),
   contrast: style('#ffcc66', '#b5f28a', '#8fd0ff', '#8a929c', '#e3c2ff', '#ff9488', '#aab2bc', '#ffe08a', '#f0f2f5', false),
   plain: style('#e6e8eb', '#c8ccd2', '#c8ccd2', '#5c636d', '#c8ccd2', '#c8ccd2', '#7d848e', '#e6e8eb', '#c8ccd2'),
+  // after well-known editor palettes
+  monokai: style('#f92672', '#e6db74', '#ae81ff', '#75715e', '#fd971f', '#f92672', '#a59f85', '#a6e22e', '#f8f8f2'),
+  dracula: style('#ff79c6', '#f1fa8c', '#bd93f9', '#6272a4', '#8be9fd', '#ff79c6', '#9ea8c7', '#50fa7b', '#f8f8f2'),
+  nord: style('#81a1c1', '#a3be8c', '#b48ead', '#616e88', '#ebcb8b', '#81a1c1', '#7b88a1', '#88c0d0', '#d8dee9'),
+  gruvbox: style('#fb4934', '#b8bb26', '#d3869b', '#928374', '#8ec07c', '#fe8019', '#a89984', '#fabd2f', '#ebdbb2'),
+  solarized: style('#859900', '#2aa198', '#d33682', '#657b83', '#6c71c4', '#cb4b16', '#839496', '#b58900', '#93a1a1'),
+  tokyo: style('#bb9af7', '#9ece6a', '#ff9e64', '#565f89', '#7dcfff', '#89ddff', '#737aa2', '#7aa2f7', '#c0caf5'),
 };
