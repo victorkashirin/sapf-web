@@ -265,7 +265,7 @@ evaluated text only, so calling a function that plays (`\[... play] = f`, then `
 `.github/workflows/web.yml` deploys the page to a Cloudflare Worker that serves static files
 (`wrangler.jsonc`). It runs when a GitHub Release is published, or by hand from the Actions tab
 ("Web release"). It builds the dependencies (cached between runs), runs `build.sh`, `smoke.mjs`,
-`sapf-text.test.mjs` and `test_sapf.js`, copies `index.html`, `_headers`, `favicon.png`, `sounds/`, `build/sapf.mjs`, `build/sapf.wasm` and `build/editor.js` into
+`sapf-text.test.mjs` and `test_sapf.js`, copies `index.html`, `_headers`, `favicon.png`, `og.png`, `sounds/`, `fonts/`, `build/sapf.mjs`, `build/sapf.wasm`, `build/editor.js` and the two `build/sapf-*examples.txt` files into
 `web/dist`, deploys that folder with wrangler 4, and attaches it as `sapf-web.zip` to the
 release. A prerelease gets the zip but does not replace the live site.
 
