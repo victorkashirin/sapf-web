@@ -9,7 +9,8 @@
 </script>
 <meta name="color-scheme" content="dark">
 <title>sapf web: Sound As Pure Form in the browser</title>
-<meta name="description" content="sapf (Sound As Pure Form), James McCartney's language for sound synthesis and live coding, running in the browser via WebAssembly. No install needed.">
+<meta name="description"
+  content="sapf (Sound As Pure Form), James McCartney's language for sound synthesis and live coding, running in the browser via WebAssembly. No install needed.">
 <meta name="author" content="Victor Kashirin">
 <meta name="robots" content="index, follow">
 <meta name="theme-color" content="#1c1c1c">
@@ -19,15 +20,18 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="sapf web">
 <meta property="og:title" content="sapf web: Sound As Pure Form in the browser">
-<meta property="og:description" content="James McCartney's sapf language for sound synthesis and live coding, running in the browser via WebAssembly.">
+<meta property="og:description"
+  content="James McCartney's sapf language for sound synthesis and live coding, running in the browser via WebAssembly.">
 <meta property="og:url" content="https://sapf.dev/">
 <meta property="og:image" content="https://sapf.dev/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="sapf logo with the text: sapf web, Sound As Pure Form, live coding audio in the browser">
+<meta property="og:image:alt"
+  content="sapf logo with the text: sapf web, Sound As Pure Form, live coding audio in the browser">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="sapf web: Sound As Pure Form in the browser">
-<meta name="twitter:description" content="James McCartney's sapf language for sound synthesis and live coding, running in the browser via WebAssembly.">
+<meta name="twitter:description"
+  content="James McCartney's sapf language for sound synthesis and live coding, running in the browser via WebAssembly.">
 <meta name="twitter:image" content="https://sapf.dev/og.png">
 <script type="application/ld+json">
 {"@context": "https://schema.org", "@type": "WebApplication", "name": "sapf web", "url": "https://sapf.dev/",
@@ -38,197 +42,836 @@
 </script>
 <style>
   /* Barlow (SIL OFL, fonts/OFL.txt), latin subset */
-  @font-face { font-family: Barlow; font-weight: 400; font-display: swap; src: url(fonts/barlow-400.woff2) format("woff2"); }
-  @font-face { font-family: Barlow; font-weight: 600; font-display: swap; src: url(fonts/barlow-600.woff2) format("woff2"); }
+  @font-face {
+    font-family: Barlow;
+    font-weight: 400;
+    font-display: swap;
+    src: url(fonts/barlow-400.woff2) format("woff2");
+  }
+
+  @font-face {
+    font-family: Barlow;
+    font-weight: 600;
+    font-display: swap;
+    src: url(fonts/barlow-600.woff2) format("woff2");
+  }
+
   /* Plain panels: flat greys, 1px lines, square corners. The UI in Barlow, code and console in mono. */
   :root {
     --ui: Barlow, system-ui, sans-serif;
     --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-    --text: #e2e2e2; --dim: #959595; --amber: #ffb454; --red: #ff7b72; --phosphor: #7ee787;
-    --line: #ffffff1c; --fill: #ffffff10;
+    --text: #e2e2e2;
+    --dim: #959595;
+    --amber: #ffb454;
+    --red: #ff7b72;
+    --phosphor: #7ee787;
+    --line: #ffffff1c;
+    --fill: #ffffff10;
   }
-  * { box-sizing: border-box; }
+
+  * {
+    box-sizing: border-box;
+  }
+
   body {
-    margin: 0; height: 100vh; height: 100dvh; display: grid; grid-template-rows: auto 1fr;
-    font: 13px var(--mono); color: var(--text); background: #1c1c1c;
+    margin: 0;
+    height: 100vh;
+    height: 100dvh;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    font: 13px var(--mono);
+    color: var(--text);
+    background: #1c1c1c;
   }
-  header, .tag, .settings, #controls, .pop, dialog { font-family: var(--ui); }
-  header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px 16px 10px; }
-  .brand { display: inline-flex; margin-right: 8px; }
-  .logo { height: 30px; width: auto; fill: var(--text); }
-  #about { margin-left: auto; }
+
+  header,
+  .tag,
+  .settings,
+  #controls,
+  .pop,
+  dialog {
+    font-family: var(--ui);
+  }
+
+  header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px 10px;
+  }
+
+  .brand {
+    display: inline-flex;
+    margin-right: 8px;
+  }
+
+  .logo {
+    height: 30px;
+    width: auto;
+    fill: var(--text);
+  }
+
+  #about {
+    margin-left: auto;
+  }
 
   dialog {
-    max-width: min(520px, calc(100vw - 32px)); padding: 0; border: 0; color: var(--text);
-    background: #2c2c2c; box-shadow: 0 0 0 1px var(--line), 0 8px 24px #0008;
+    max-width: min(520px, calc(100vw - 32px));
+    padding: 0;
+    border: 0;
+    color: var(--text);
+    background: #2c2c2c;
+    box-shadow: 0 0 0 1px var(--line), 0 8px 24px #0008;
   }
-  dialog > div { padding: 10px 18px 16px; line-height: 1.55; }
-  dialog::backdrop { background: #000a; backdrop-filter: blur(2px); }
-  dialog a { color: var(--amber); }
-  dialog .tag { padding-left: 0; padding-right: 0; } /* flush with the text */
-  dialog .keys { border-spacing: 0; margin: 0 0 1em; }
-  dialog .keys td { padding: 1px 0; }
-  dialog .keys td:first-child { color: var(--amber); padding-right: 16px; white-space: nowrap; }
-  dialog .actions { text-align: right; margin-bottom: 0; }
+
+  dialog>div {
+    padding: 10px 18px 16px;
+    line-height: 1.55;
+  }
+
+  dialog::backdrop {
+    background: #000a;
+    backdrop-filter: blur(2px);
+  }
+
+  dialog a {
+    color: var(--amber);
+  }
+
+  dialog .tag {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  /* flush with the text */
+  dialog .keys {
+    border-spacing: 0;
+    margin: 0 0 1em;
+  }
+
+  dialog .keys td {
+    padding: 1px 0;
+  }
+
+  dialog .keys td:first-child {
+    color: var(--amber);
+    padding-right: 16px;
+    white-space: nowrap;
+  }
+
+  dialog .actions {
+    text-align: right;
+    margin-bottom: 0;
+  }
 
   /* buttons: plain text, a faint fill on hover. Longhands, not `font`, which would reset button.icon's line-height: 0. */
-  button, .btn {
-    font-family: var(--ui); font-size: 13px; color: var(--text); padding: 4px 10px; cursor: pointer;
-    border: 0; border-radius: 0; background: transparent;
+  button,
+  .btn {
+    font-family: var(--ui);
+    font-size: 13px;
+    color: var(--text);
+    padding: 4px 10px;
+    cursor: pointer;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
   }
-  button:hover, .btn:hover, details[open] > .btn { background: var(--fill); }
-  button:active { background: #ffffff18; }
-  #stop { color: var(--red); }
-  #runs { display: none; gap: 4px; } /* keyboards have the Enter keys */
-  @media (pointer: coarse) { #runs { display: flex; } }
-  .toggles { display: inline-flex; gap: 6px; } /* wrap together */
-  .break { display: none; } /* the mobile header's row break */
-  button.icon { line-height: 0; color: var(--dim); }
-  button.icon svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
-  button.icon[aria-pressed="true"], button.icon[aria-expanded="true"] { color: var(--phosphor); }
+
+  button:hover,
+  .btn:hover,
+  details[open]>.btn {
+    background: var(--fill);
+  }
+
+  button:active {
+    background: #ffffff18;
+  }
+
+  #stop {
+    color: var(--red);
+  }
+
+  #runs {
+    display: none;
+    gap: 4px;
+  }
+
+  /* keyboards have the Enter keys */
+  @media (pointer: coarse) {
+    #runs {
+      display: flex;
+    }
+  }
+
+  .toggles {
+    display: inline-flex;
+    gap: 6px;
+  }
+
+  /* wrap together */
+  .break {
+    display: none;
+  }
+
+  /* the mobile header's row break */
+  button.icon {
+    line-height: 0;
+    color: var(--dim);
+  }
+
+  button.icon svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  button.icon[aria-pressed="true"],
+  button.icon[aria-expanded="true"] {
+    color: var(--phosphor);
+  }
 
   /* File and Sounds menus: <details> dropdowns */
-  .menu { position: relative; }
-  .menu summary { list-style: none; }
-  .menu summary::-webkit-details-marker { display: none; }
-  .menu summary::after { content: "▾"; margin-left: 7px; color: var(--dim); }
+  .menu {
+    position: relative;
+  }
+
+  .menu summary {
+    list-style: none;
+  }
+
+  .menu summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .menu summary::after {
+    content: "▾";
+    margin-left: 7px;
+    color: var(--dim);
+  }
+
   .menu .pop {
-    position: absolute; z-index: 10; top: calc(100% + 8px); left: 0; width: 260px; max-height: 70vh; overflow: auto;
-    padding: 6px; background: #2c2c2c; box-shadow: 0 0 0 1px var(--line), 0 8px 24px #0008; font-size: 13px;
+    position: absolute;
+    z-index: 10;
+    top: calc(100% + 8px);
+    left: 0;
+    width: 260px;
+    max-height: 70vh;
+    overflow: auto;
+    padding: 6px;
+    background: #2c2c2c;
+    box-shadow: 0 0 0 1px var(--line), 0 8px 24px #0008;
+    font-size: 13px;
   }
-  .pop .row { display: flex; gap: 6px; padding: 2px 0 6px; }
-  .pop input { flex: 1; min-width: 0; font: inherit; color: var(--text); padding: 4px 8px; }
-  .pop input, .settings select { border: 0; border-radius: 0; background: #1c1c1c; box-shadow: inset 0 0 0 1px var(--line); }
-  .pop .item, .pop .del {
-    display: block; width: 100%; text-align: left; padding: 5px 8px; font: inherit; color: var(--text);
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+
+  .pop .row {
+    display: flex;
+    gap: 6px;
+    padding: 2px 0 6px;
   }
-  .pop .item:hover, .pop .item:focus-visible { background: var(--fill); color: var(--amber); }
-  .pop .item.cur { color: var(--amber); }
-  .pop .file { display: flex; align-items: center; }
-  .pop .ch { flex: none; color: var(--dim); font-size: 11px; padding: 0 4px 0 8px; }
-  .pop .gap { visibility: hidden; } /* where × would be, so labels line up */
-  .pop .del { flex: none; width: auto; color: var(--dim); }
-  .pop .del:hover, .pop .del:focus-visible { background: none; color: var(--red); }
-  .pop .play { width: 24px; padding: 5px 0 5px 6px; text-align: center; } /* fixed width: ▶ and ■ differ, and the name must not shift */
-  .pop .play:hover, .pop .play:focus-visible, .pop .play.on { color: var(--amber); }
-  .pop .none { color: var(--dim); padding: 5px 8px; }
-  #fileList .item, #soundList .item, .pop .none, .pop [data-example], .pop .prelude { padding-left: 18px; } /* entries under a heading */
-  .pop .hint { color: var(--dim); font-size: 11px; padding: 8px 8px 2px; border-top: 1px solid var(--line); margin-top: 4px; }
+
+  .pop input {
+    flex: 1;
+    min-width: 0;
+    font: inherit;
+    color: var(--text);
+    padding: 4px 8px;
+  }
+
+  .pop input,
+  .settings select {
+    border: 0;
+    border-radius: 0;
+    background: #1c1c1c;
+    box-shadow: inset 0 0 0 1px var(--line);
+  }
+
+  .pop .item,
+  .pop .del {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 5px 8px;
+    font: inherit;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .pop .item:hover,
+  .pop .item:focus-visible {
+    background: var(--fill);
+    color: var(--amber);
+  }
+
+  .pop .item.cur {
+    color: var(--amber);
+  }
+
+  .pop .file {
+    display: flex;
+    align-items: center;
+  }
+
+  .pop .ch {
+    flex: none;
+    color: var(--dim);
+    font-size: 11px;
+    padding: 0 4px 0 8px;
+  }
+
+  .pop .gap {
+    visibility: hidden;
+  }
+
+  /* where × would be, so labels line up */
+  .pop .del {
+    flex: none;
+    width: auto;
+    color: var(--dim);
+  }
+
+  .pop .del:hover,
+  .pop .del:focus-visible {
+    background: none;
+    color: var(--red);
+  }
+
+  .pop .play {
+    width: 24px;
+    padding: 5px 0 5px 6px;
+    text-align: center;
+  }
+
+  /* fixed width: ▶ and ■ differ, and the name must not shift */
+  .pop .play:hover,
+  .pop .play:focus-visible,
+  .pop .play.on {
+    color: var(--amber);
+  }
+
+  .pop .none {
+    color: var(--dim);
+    padding: 5px 8px;
+  }
+
+  #fileList .item,
+  #soundList .item,
+  .pop .none,
+  .pop [data-example],
+  .pop .prelude {
+    padding-left: 18px;
+  }
+
+  /* entries under a heading */
+  .pop .hint {
+    color: var(--dim);
+    font-size: 11px;
+    padding: 8px 8px 2px;
+    border-top: 1px solid var(--line);
+    margin-top: 4px;
+  }
 
   /* labels: panel titles, menu and dialog headings */
-  .tag { font-size: 12px; letter-spacing: .02em; text-transform: lowercase; color: var(--dim); padding: 2px 4px 6px; }
-  .pop .tag { font-size: 10px; font-weight: 600; letter-spacing: .08em; padding: 10px 8px 4px; margin-top: 4px; border-top: 1px solid var(--line); }
+  .tag {
+    font-size: 12px;
+    letter-spacing: .02em;
+    text-transform: lowercase;
+    color: var(--dim);
+    padding: 2px 4px 6px;
+  }
+
+  .pop .tag {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    padding: 10px 8px 4px;
+    margin-top: 4px;
+    border-top: 1px solid var(--line);
+  }
 
   /* a panel's title strip: name, then its buttons at the right end, the cog last. Barlow sits low in its line, so the
      label is lifted 1.5px (4.5px above, 7.5px below) and the buttons' margins keep them centred. The cog's icon is 8px
      from the right edge, as the label is from the left: 3px strip padding, then a square button with 5px of its own. */
-  .panel > .tag { display: flex; align-items: center; gap: .5em; white-space: nowrap; padding: 4.5px 3px 7.5px 8px; border-bottom: 1px solid var(--line); }
-  #fileLabel { color: var(--dim); letter-spacing: .1em; text-transform: none; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-  #runs, #clearLog, .cog { margin: -1.5px 0 -4.5px auto; }
-  #clearLog + .cog { margin-left: 0; }
-  @media (pointer: coarse) { #runs + .cog { margin-left: 0; } }
+  .panel>.tag {
+    display: flex;
+    align-items: center;
+    gap: .5em;
+    white-space: nowrap;
+    padding: 4.5px 3px 7.5px 8px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  #fileLabel {
+    color: var(--dim);
+    letter-spacing: .1em;
+    text-transform: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+
+  #runs,
+  #clearLog,
+  .cog {
+    margin: -1.5px 0 -4.5px auto;
+  }
+
+  #clearLog+.cog {
+    margin-left: 0;
+  }
+
+  @media (pointer: coarse) {
+    #runs+.cog {
+      margin-left: 0;
+    }
+  }
+
   /* Clear and the touch Run buttons: lowercase like the label, lifted 1.5px the same way; all strip buttons one height */
-  .panel > .tag button { height: 22px; padding: 0 8px 3px; font-size: 12px; text-transform: lowercase; }
-  #runs button { color: var(--amber); }
-  #clearLog { color: var(--dim); }
-  #clearLog:hover { color: var(--text); }
-  .panel > .tag .cog { width: 22px; padding: 0 5px; }
-  .cog[aria-expanded="false"] { color: var(--dim); } /* muted like the labels; green while its settings are open */
-  .cog[aria-expanded="false"]:hover { color: var(--text); }
-  button.cog svg { width: 12px; height: 12px; }
-  @media (pointer: coarse), (max-width: 760px) { /* finger-sized */
-    .panel > .tag { padding-right: 0; }
-    .panel > .tag button { height: 28px; }
-    .panel > .tag .cog { width: 28px; padding: 0 8px; }
+  .panel>.tag button {
+    height: 22px;
+    padding: 0 8px 3px;
+    font-size: 12px;
+    text-transform: lowercase;
+  }
+
+  #runs button {
+    color: var(--amber);
+  }
+
+  #clearLog {
+    color: var(--dim);
+  }
+
+  #clearLog:hover {
+    color: var(--text);
+  }
+
+  .panel>.tag .cog {
+    width: 22px;
+    padding: 0 5px;
+  }
+
+  .cog[aria-expanded="false"] {
+    color: var(--dim);
+  }
+
+  /* muted like the labels; green while its settings are open */
+  .cog[aria-expanded="false"]:hover {
+    color: var(--text);
+  }
+
+  button.cog svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  @media (pointer: coarse),
+  (max-width: 760px) {
+
+    /* finger-sized */
+    .panel>.tag {
+      padding-right: 0;
+    }
+
+    .panel>.tag button {
+      height: 28px;
+    }
+
+    .panel>.tag .cog {
+      width: 28px;
+      padding: 0 8px;
+    }
   }
 
   /* a panel's settings: a strip above its screen, so changes show beside it rather than under a popup */
-  .settings { display: flex; flex-wrap: wrap; gap: 0 16px; padding: 8px; border-bottom: 1px solid var(--line); font-size: 12px; }
-  .settings label { flex: 1 1 15em; display: grid; grid-template-columns: 4.5em minmax(3em, 1fr) 4.5em; gap: 8px; align-items: center; }
-  .settings span { color: var(--dim); }
-  .settings output { color: var(--amber); text-align: right; font-variant-numeric: tabular-nums; }
-  .settings select { grid-column: span 2; font: inherit; color: var(--text); padding: 3px 6px; }
+  .settings {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 16px;
+    padding: 8px;
+    border-bottom: 1px solid var(--line);
+    font-size: 12px;
+  }
+
+  .settings label {
+    flex: 1 1 15em;
+    display: grid;
+    grid-template-columns: 4.5em minmax(3em, 1fr) 4.5em;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .settings span {
+    color: var(--dim);
+  }
+
+  .settings output {
+    color: var(--amber);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .settings select {
+    grid-column: span 2;
+    font: inherit;
+    color: var(--text);
+    padding: 3px 6px;
+  }
 
   /* Solo: an LED toggle */
-  .led { display: inline-flex; align-items: center; gap: 6px; color: var(--dim); cursor: pointer; user-select: none; }
-  .led input { appearance: none; margin: 0; width: 9px; height: 9px; cursor: pointer; background: #454545; }
-  .led input:checked { background: var(--phosphor); }
-  :focus-visible { outline: 1px solid var(--amber); outline-offset: 2px; }
-  :is(input:not([type=checkbox], [type=range]), select):focus { outline-offset: -1px; } /* a field's focus ring replaces its 1px edge, flush */
+  .led {
+    margin-left: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--dim);
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .led input {
+    appearance: none;
+    margin: 0;
+    width: 9px;
+    height: 9px;
+    cursor: pointer;
+    background: #454545;
+  }
+
+  .led input:checked {
+    background: var(--phosphor);
+  }
+
+  :focus-visible {
+    outline: 1px solid var(--amber);
+    outline-offset: 2px;
+  }
+
+  :is(input:not([type=checkbox], [type=range]), select):focus {
+    outline-offset: -1px;
+  }
+
+  /* a field's focus ring replaces its 1px edge, flush */
 
   /* Tiles: each splits in two, side by side (.row) or stacked (.col); --a/--b are the halves' shares, set by dragging the splitter.
      Panels sit edge to edge, split by a 1px line whose grab area reaches 4px either side over the panels. */
-  main, .tile { display: grid; grid-template: minmax(0, 1fr) / minmax(0, 1fr); min-width: 0; min-height: 0; }
-  main { border-top: 1px solid var(--line); }
-  .tile.row { grid-template-columns: minmax(0, var(--a)) 1px minmax(0, var(--b)); }
-  .tile.col { grid-template-rows: minmax(0, var(--a)) 1px minmax(0, var(--b)); }
-  .split { position: relative; z-index: 5; background: var(--line); cursor: col-resize; touch-action: none; }
-  .split.row { height: 1px; cursor: row-resize; }
-  .split::before { content: ""; position: absolute; inset: 0 -4px; }
-  .split.row::before { inset: -4px 0; }
-  @media (pointer: coarse) { .split::before { inset: 0 -8px; } .split.row::before { inset: -8px 0; } } /* finger-sized */
-  .split:hover, .split.drag { background: var(--amber); }
+  main,
+  .tile {
+    display: grid;
+    grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+    min-width: 0;
+    min-height: 0;
+  }
+
+  main {
+    border-top: 1px solid var(--line);
+  }
+
+  .tile.row {
+    grid-template-columns: minmax(0, var(--a)) 1px minmax(0, var(--b));
+  }
+
+  .tile.col {
+    grid-template-rows: minmax(0, var(--a)) 1px minmax(0, var(--b));
+  }
+
+  .split {
+    position: relative;
+    z-index: 5;
+    background: var(--line);
+    cursor: col-resize;
+    touch-action: none;
+  }
+
+  .split.row {
+    height: 1px;
+    cursor: row-resize;
+  }
+
+  .split::before {
+    content: "";
+    position: absolute;
+    inset: 0 -4px;
+  }
+
+  .split.row::before {
+    inset: -4px 0;
+  }
+
+  @media (pointer: coarse) {
+    .split::before {
+      inset: 0 -8px;
+    }
+
+    .split.row::before {
+      inset: -8px 0;
+    }
+  }
+
+  /* finger-sized */
+  .split:hover,
+  .split.drag {
+    background: var(--amber);
+  }
+
   /* a panel's title strip is its handle: drop it on another panel's edge to split there, on its middle to swap */
-  .panel > .tag { cursor: grab; touch-action: none; user-select: none; }
-  .panel.dragging { opacity: .45; }
-  .panel.dragging > .tag { cursor: grabbing; }
-  #drop { position: fixed; z-index: 20; pointer-events: none; border: 2px solid var(--amber); background: #ffb4541a; }
-  [hidden] { display: none !important; } /* over .panel's display: flex */
+  .panel>.tag {
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+  }
+
+  .panel.dragging {
+    opacity: .45;
+  }
+
+  .panel.dragging>.tag {
+    cursor: grabbing;
+  }
+
+  #drop {
+    position: fixed;
+    z-index: 20;
+    pointer-events: none;
+    border: 2px solid var(--amber);
+    background: #ffb4541a;
+  }
+
+  [hidden] {
+    display: none !important;
+  }
+
+  /* over .panel's display: flex */
 
   /* the editor sits on the panel; the console, scope and spectrum on a darker screen */
-  .panel { display: flex; flex-direction: column; min-height: 0; background: #262626; }
-  .screen { flex: 1; min-height: 0; overflow: hidden; }
-  #log, #help, canvas.screen { background: #141414; }
-  #help { padding: 4px 12px 10px; overflow: auto; font: var(--help-size, 13px)/1.45 var(--mono); }
-  #help h3 { margin: 12px 0 4px; font: inherit; color: var(--amber); }
-  #help div { margin-bottom: 6px; }
-  #help code { color: var(--phosphor); }
+  .panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: #262626;
+  }
+
+  .screen {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  #log,
+  #help,
+  canvas.screen {
+    background: #141414;
+  }
+
+  #help {
+    padding: 4px 12px 10px;
+    overflow: auto;
+    font: var(--help-size, 13px)/1.45 var(--mono);
+  }
+
+  #help h3 {
+    margin: 12px 0 4px;
+    font: inherit;
+    color: var(--amber);
+  }
+
+  #help div {
+    margin-bottom: 6px;
+  }
+
+  #help code {
+    color: var(--phosphor);
+  }
+
   #log {
-    margin: 0; padding: 10px 12px; overflow: auto; white-space: pre-wrap; word-break: break-word;
+    margin: 0;
+    padding: 10px 12px;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
     font: var(--log-size, 13px)/1.45 var(--mono);
   }
+
   /* flex-basis 0: the canvas fills its panel, never sized by its own pixel buffer */
-  canvas.screen { display: block; flex: 1 1 0; width: 100%; }
-  #log .in { color: var(--amber); }
-  #log .err { color: var(--red); }
-  #log .dim { color: var(--dim); }
-  #log a { color: var(--amber); }
-  #log::after { content: "▋"; animation: blink 1s steps(1) infinite; }
-  @keyframes blink { 50% { opacity: 0; } }
+  canvas.screen {
+    display: block;
+    flex: 1 1 0;
+    width: 100%;
+  }
+
+  #log .in {
+    color: var(--amber);
+  }
+
+  #log .err {
+    color: var(--red);
+  }
+
+  #log .dim {
+    color: var(--dim);
+  }
+
+  #log a {
+    color: var(--amber);
+  }
+
+  #log::after {
+    content: "▋";
+    animation: blink 1s steps(1) infinite;
+  }
+
+  @keyframes blink {
+    50% {
+      opacity: 0;
+    }
+  }
 
   /* sliders: a thin track, a square cap */
-  #controls { padding: 4px 8px; border-bottom: 1px solid var(--line); flex: none; max-height: 50%; overflow-y: auto; } /* many sliders scroll, the console keeps half */
-  #controls:empty { display: none; }
-  #controls label { display: grid; grid-template-columns: 7em 1fr 5em; gap: 10px; align-items: center; margin: 6px 0; }
-  #controls span { color: var(--dim); overflow: hidden; text-overflow: ellipsis; }
-  #controls output { color: var(--amber); text-align: right; font-variant-numeric: tabular-nums; }
-  input[type=range] { appearance: none; background: none; height: 22px; margin: 0; }
-  input[type=range]::-webkit-slider-runnable-track { height: 2px; background: #4a4a4a; }
-  input[type=range]::-moz-range-track { height: 2px; background: #4a4a4a; }
-  input[type=range]::-webkit-slider-thumb { appearance: none; width: 10px; height: 10px; margin-top: -4px; border: 0; border-radius: 0; background: var(--text); }
-  input[type=range]::-moz-range-thumb { width: 10px; height: 10px; border: 0; border-radius: 0; background: var(--text); }
+  #controls {
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--line);
+    flex: none;
+    max-height: 50%;
+    overflow-y: auto;
+  }
+
+  /* many sliders scroll, the console keeps half */
+  #controls:empty {
+    display: none;
+  }
+
+  #controls label {
+    display: grid;
+    grid-template-columns: 7em 1fr 5em;
+    gap: 10px;
+    align-items: center;
+    margin: 6px 0;
+  }
+
+  #controls span {
+    color: var(--dim);
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  #controls output {
+    color: var(--amber);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  input[type=range] {
+    appearance: none;
+    background: none;
+    height: 22px;
+    margin: 0;
+  }
+
+  input[type=range]::-webkit-slider-runnable-track {
+    height: 2px;
+    background: #4a4a4a;
+  }
+
+  input[type=range]::-moz-range-track {
+    height: 2px;
+    background: #4a4a4a;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    appearance: none;
+    width: 10px;
+    height: 10px;
+    margin-top: -4px;
+    border: 0;
+    border-radius: 0;
+    background: var(--text);
+  }
+
+  input[type=range]::-moz-range-thumb {
+    width: 10px;
+    height: 10px;
+    border: 0;
+    border-radius: 0;
+    background: var(--text);
+  }
 
   @media (max-width: 760px) {
-    .panel > .tag { cursor: auto; touch-action: auto; } /* the narrow layout is fixed: nothing to drag */
-    .settings label { grid-template-columns: 3.2em minmax(2em, 1fr) 4em; gap: 6px; }
+    .panel>.tag {
+      cursor: auto;
+      touch-action: auto;
+    }
+
+    /* the narrow layout is fixed: nothing to drag */
+    .settings label {
+      grid-template-columns: 3.2em minmax(2em, 1fr) 4em;
+      gap: 6px;
+    }
+
     /* two rows: brand, menus and view toggles; then the transport (Stop and Add control share the
        spare width, up to 10em each), the Solo LED and ?. `order` moves the toggles up */
-    header { padding: 10px 16px; gap: 10px 6px; }
-    .brand { margin-right: 0; }
-    .toggles { margin-left: auto; }
-    .break { display: block; flex-basis: 100%; order: 1; }
-    #stop, #addSlider, .led, #about { order: 2; }
-    #stop, #addSlider { flex: 1 1 auto; max-width: 10em; white-space: nowrap; }
+    header {
+      padding: 10px 16px;
+      gap: 10px 6px;
+    }
+
+    .brand {
+      margin-right: 0;
+    }
+
+    .toggles {
+      margin-left: auto;
+    }
+
+    .break {
+      display: block;
+      flex-basis: 100%;
+      order: 1;
+    }
+
+    #stop,
+    #addSlider,
+    .led,
+    #about {
+      order: 2;
+    }
+
+    .led {
+      margin-left: 0;
+    }
+
+    #stop,
+    #addSlider {
+      flex: 1 1 auto;
+      max-width: 10em;
+      white-space: nowrap;
+    }
   }
-  @media (max-width: 360px) { .panel > .tag #runs button { padding-left: 5px; padding-right: 5px; } } /* 320px phones: one strip */
+
+  @media (max-width: 360px) {
+    .panel>.tag #runs button {
+      padding-left: 5px;
+      padding-right: 5px;
+    }
+  }
+
+  /* 320px phones: one strip */
 </style>
 <header>
-  <span class="brand"><svg class="logo" viewBox="0 0 63 63" role="img" aria-label="sapf"><path fill-rule="evenodd" d="M0 0 30 0 30 6 22 6 22 12 30 12 30 30 0 30 0 24 8 24 8 18 0 18ZM36 0 63 0 63 30 52 30 52 18 44 18 44 30 33 30 33 6 36 6ZM44 6 44 12 52 12 52 6ZM0 33 30 33 30 51 22 51 22 63 0 63ZM33 33 63 33 63 39 55 39 55 45 63 45 63 51 55 51 55 63 33 63ZM11 39 11 45 19 45 19 39Z"/></svg></span>
+  <span class="brand"><svg class="logo" viewBox="0 0 63 63" role="img" aria-label="sapf">
+      <path fill-rule="evenodd"
+        d="M0 0 30 0 30 6 22 6 22 12 30 12 30 30 0 30 0 24 8 24 8 18 0 18ZM36 0 63 0 63 30 52 30 52 18 44 18 44 30 33 30 33 6 36 6ZM44 6 44 12 52 12 52 6ZM0 33 30 33 30 51 22 51 22 63 0 63ZM33 33 63 33 63 39 55 39 55 45 63 45 63 51 55 51 55 63 33 63ZM11 39 11 45 19 45 19 39Z" />
+    </svg></span>
   <details class="menu" id="fileMenu">
     <summary class="btn">File</summary>
     <div class="pop">
-      <div class="row"><input id="fileName" placeholder="name" aria-label="File name" spellcheck="false"><button id="save">Save</button></div>
+      <div class="row"><input id="fileName" placeholder="name" aria-label="File name" spellcheck="false"><button
+          id="save">Save</button></div>
       <button class="item" id="new">New</button>
       <button class="item" id="export">Export</button>
       <div class="tag">saved</div>
@@ -236,7 +879,8 @@
       <div class="tag">prelude</div>
       <button class="item prelude" id="myPrelude">my prelude</button>
       <button class="item prelude" id="builtinPrelude">built-in prelude</button>
-      <div class="hint">Your prelude is your own library. It loads after the built-in one every time the page starts, so its words are always defined.</div>
+      <div class="hint">Your prelude is your own library. It loads after the built-in one every time the page starts, so
+        its words are always defined.</div>
       <div class="tag">examples</div>
       <button class="item" data-example="sapf-examples.txt">sapf examples</button>
       <button class="item" data-example="sapf-bif-examples.txt">built-in function examples</button>
@@ -249,47 +893,160 @@
       <input type="file" id="soundFile" accept="audio/*,.wav,.aif,.aiff,.caf,.au" multiple hidden>
       <div class="tag">sounds</div>
       <div id="soundList"></div>
-      <div class="hint">Click a sound to insert <code>"name" sf&gt;</code> at the cursor. Drop audio files on the page to add them. Uploads stay in this browser.</div>
+      <div class="hint">Click a sound to insert <code>"name" sf&gt;</code> at the cursor. Drop audio files on the page
+        to add them. Uploads stay in this browser.</div>
     </div>
   </details>
   <button id="stop">Stop</button><button id="addSlider">Add control</button>
   <span class="break" aria-hidden="true"></span>
-  <span class="toggles"><button id="showConsole" class="icon" aria-pressed="true" title="Show or hide the console" aria-label="Console"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4l4 4-4 4M8.5 12h5"/></svg></button>
-  <button id="showHelp" class="icon" aria-pressed="false" title="Show or hide the help: every word with its docs, as helpall prints them" aria-label="Help"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5"/><path d="M6 6.3a2 2 0 1 1 2.8 1.8c-.6.3-.8.7-.8 1.3M8 11.7v.1"/></svg></button>
-  <button id="showScope" class="icon" aria-pressed="true" title="Show or hide the scope" aria-label="Scope"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1 8Q3.5 1 6 8T11 8T16 8"/></svg></button>
-  <button id="showFall" class="icon" aria-pressed="true" title="Show or hide the spectrum" aria-label="Spectrum"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 14V9M5.5 14V4M8.5 14V7M11.5 14V2M14.5 14V10"/></svg></button></span>
-  <label class="led" title="Solo: running code that plays stops the current sound first, so only the new one plays. Turn off to layer sounds."><input type="checkbox" id="replace" checked> Solo</label>
+  <span class="toggles"><button id="showConsole" class="icon" aria-pressed="true" title="Show or hide the console"
+      aria-label="Console"><svg viewBox="0 0 16 16" aria-hidden="true">
+        <path d="M2.5 4l4 4-4 4M8.5 12h5" />
+      </svg></button>
+    <button id="showHelp" class="icon" aria-pressed="false"
+      title="Show or hide the help: every word with its docs, as helpall prints them" aria-label="Help"><svg
+        viewBox="0 0 16 16" aria-hidden="true">
+        <circle cx="8" cy="8" r="6.5" />
+        <path d="M6 6.3a2 2 0 1 1 2.8 1.8c-.6.3-.8.7-.8 1.3M8 11.7v.1" />
+      </svg></button>
+    <button id="showScope" class="icon" aria-pressed="true" title="Show or hide the scope" aria-label="Scope"><svg
+        viewBox="0 0 16 16" aria-hidden="true">
+        <path d="M1 8Q3.5 1 6 8T11 8T16 8" />
+      </svg></button>
+    <button id="showFall" class="icon" aria-pressed="true" title="Show or hide the spectrum" aria-label="Spectrum"><svg
+        viewBox="0 0 16 16" aria-hidden="true">
+        <path d="M2.5 14V9M5.5 14V4M8.5 14V7M11.5 14V2M14.5 14V10" />
+      </svg></button></span>
+  <label class="led"
+    title="Solo: running code that plays stops the current sound first, so only the new one plays. Turn off to layer sounds."><input
+      type="checkbox" id="replace" checked> Solo</label>
   <button id="about" title="About" aria-label="About">?</button>
 </header>
 <dialog id="aboutDialog">
   <div>
     <div class="tag">about</div>
-    <p><b>sapf web</b> by <a href="https://victorkashirin.com">Victor Kashirin</a>: <a href="https://github.com/victorkashirin/sapf-web">github.com/victorkashirin/sapf-web</a></p>
+    <p><b>sapf web</b> by <a href="https://victorkashirin.com">Victor Kashirin</a>: <a
+        href="https://github.com/victorkashirin/sapf-web">github.com/victorkashirin/sapf-web</a></p>
     <p>sapf (Sound As Pure Form) running in the browser via WebAssembly. A fork of
       <a href="https://github.com/ahihi/sapf">ahihi/sapf</a>, the cross-platform port of James McCartney's original
-      <a href="https://github.com/lfnoise/sapf">lfnoise/sapf</a>.</p>
+      <a href="https://github.com/lfnoise/sapf">lfnoise/sapf</a>.
+    </p>
     <div class="tag">keys (Mod = Cmd/Ctrl)</div>
     <table class="keys">
-      <tr><td>Mod+Enter</td><td>eval line / selection</td></tr>
-      <tr><td>Shift+Enter</td><td>eval ( ) block</td></tr>
-      <tr><td>Mod+Shift+Enter</td><td>eval paragraph</td></tr>
-      <tr><td>Esc, Mod+.</td><td>stop sound</td></tr>
-      <tr><td>Mod+Shift+.</td><td>clear stack</td></tr>
-      <tr><td>Mod+K</td><td>clear console</td></tr>
-      <tr><td>Shift+Alt+F</td><td>format</td></tr>
-      <tr><td>Ctrl+Space</td><td>complete (Mac: also Opt+` or Opt+I)</td></tr>
-      <tr><td>Mod+F</td><td>find / replace</td></tr>
+      <tr>
+        <td>Mod+Enter</td>
+        <td>eval line / selection</td>
+      </tr>
+      <tr>
+        <td>Shift+Enter</td>
+        <td>eval ( ) block</td>
+      </tr>
+      <tr>
+        <td>Mod+Shift+Enter</td>
+        <td>eval paragraph</td>
+      </tr>
+      <tr>
+        <td>Esc, Mod+.</td>
+        <td>stop sound</td>
+      </tr>
+      <tr>
+        <td>Mod+Shift+.</td>
+        <td>clear stack</td>
+      </tr>
+      <tr>
+        <td>Mod+K</td>
+        <td>clear console</td>
+      </tr>
+      <tr>
+        <td>Shift+Alt+F</td>
+        <td>format</td>
+      </tr>
+      <tr>
+        <td>Ctrl+Space</td>
+        <td>complete (Mac: also Opt+` or Opt+I)</td>
+      </tr>
+      <tr>
+        <td>Mod+F</td>
+        <td>find / replace</td>
+      </tr>
     </table>
     <p>Licensed under the <a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU GPL v3.0</a>.</p>
     <p class="actions"><button id="aboutClose">Close</button></p>
   </div>
 </dialog>
 <main>
-  <section class="panel" data-panel="editor"><div class="tag">editor <span id="fileLabel"></span><span id="runs"><button data-run="line" title="Run the selection or the line (Mod+Enter)">Line</button><button data-run="block" title="Run the selection or the ( ) block around the cursor (Shift+Enter)">Block</button><button data-run="paragraph" title="Run the selection or the paragraph (Mod+Shift+Enter)">Para</button></span><button class="icon cog" title="Settings" aria-label="Editor settings" aria-expanded="false"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"/><circle cx="8" cy="8" r="4.3"/></svg></button></div><div class="settings" hidden><label><span>theme</span><select id="theme"><option value="amber">amber</option><option value="phosphor">phosphor</option><option value="contrast">high contrast</option><option value="plain">plain</option><option value="monokai">monokai</option><option value="dracula">dracula</option><option value="nord">nord</option><option value="gruvbox">gruvbox</option><option value="solarized">solarized dark</option><option value="tokyo">tokyo night</option></select></label></div><div class="screen" id="code"></div></section>
-  <section class="panel" data-panel="console"><div class="tag">console <button id="clearLog" title="Clear console (Mod+K)">Clear</button><button class="icon cog" title="Settings" aria-label="Console settings" aria-expanded="false"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"/><circle cx="8" cy="8" r="4.3"/></svg></button></div><div class="settings" hidden></div><div id="controls"></div><pre class="screen" id="log"></pre></section>
-  <section class="panel" data-panel="scope"><div class="tag">scope<button class="icon cog" title="Settings" aria-label="Scope settings" aria-expanded="false"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"/><circle cx="8" cy="8" r="4.3"/></svg></button></div><div class="settings" hidden></div><canvas class="screen" id="scope" role="img" aria-label="Oscilloscope of the output"></canvas></section>
-  <section class="panel" data-panel="fall"><div class="tag">spectrum<button class="icon cog" title="Settings" aria-label="Spectrum settings" aria-expanded="false"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"/><circle cx="8" cy="8" r="4.3"/></svg></button></div><div class="settings" hidden></div><canvas class="screen" id="fall" role="img" aria-label="Spectrogram of the output"></canvas></section>
-  <section class="panel" data-panel="help"><div class="tag">help<button class="icon cog" title="Settings" aria-label="Help settings" aria-expanded="false"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"/><circle cx="8" cy="8" r="4.3"/></svg></button></div><div class="settings" hidden></div><div class="screen" id="help"></div></section>
+  <section class="panel" data-panel="editor">
+    <div class="tag">editor <span id="fileLabel"></span><span id="runs"><button data-run="line"
+          title="Run the selection or the line (Mod+Enter)">Line</button><button data-run="block"
+          title="Run the selection or the ( ) block around the cursor (Shift+Enter)">Block</button><button
+          data-run="paragraph" title="Run the selection or the paragraph (Mod+Shift+Enter)">Para</button></span><button
+        class="icon cog" title="Settings" aria-label="Editor settings" aria-expanded="false"><svg viewBox="0 0 16 16"
+          aria-hidden="true">
+          <circle cx="8" cy="8" r="2.2" />
+          <path
+            d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4" />
+          <circle cx="8" cy="8" r="4.3" />
+        </svg></button></div>
+    <div class="settings" hidden><label><span>theme</span><select id="theme">
+          <option value="amber">amber</option>
+          <option value="phosphor">phosphor</option>
+          <option value="contrast">high contrast</option>
+          <option value="plain">plain</option>
+          <option value="monokai">monokai</option>
+          <option value="dracula">dracula</option>
+          <option value="nord">nord</option>
+          <option value="gruvbox">gruvbox</option>
+          <option value="solarized">solarized dark</option>
+          <option value="tokyo">tokyo night</option>
+        </select></label></div>
+    <div class="screen" id="code"></div>
+  </section>
+  <section class="panel" data-panel="console">
+    <div class="tag">console <button id="clearLog" title="Clear console (Mod+K)">Clear</button><button class="icon cog"
+        title="Settings" aria-label="Console settings" aria-expanded="false"><svg viewBox="0 0 16 16"
+          aria-hidden="true">
+          <circle cx="8" cy="8" r="2.2" />
+          <path
+            d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4" />
+          <circle cx="8" cy="8" r="4.3" />
+        </svg></button></div>
+    <div class="settings" hidden></div>
+    <div id="controls"></div>
+    <pre class="screen" id="log"></pre>
+  </section>
+  <section class="panel" data-panel="scope">
+    <div class="tag">scope<button class="icon cog" title="Settings" aria-label="Scope settings"
+        aria-expanded="false"><svg viewBox="0 0 16 16" aria-hidden="true">
+          <circle cx="8" cy="8" r="2.2" />
+          <path
+            d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4" />
+          <circle cx="8" cy="8" r="4.3" />
+        </svg></button></div>
+    <div class="settings" hidden></div><canvas class="screen" id="scope" role="img"
+      aria-label="Oscilloscope of the output"></canvas>
+  </section>
+  <section class="panel" data-panel="fall">
+    <div class="tag">spectrum<button class="icon cog" title="Settings" aria-label="Spectrum settings"
+        aria-expanded="false"><svg viewBox="0 0 16 16" aria-hidden="true">
+          <circle cx="8" cy="8" r="2.2" />
+          <path
+            d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4" />
+          <circle cx="8" cy="8" r="4.3" />
+        </svg></button></div>
+    <div class="settings" hidden></div><canvas class="screen" id="fall" role="img"
+      aria-label="Spectrogram of the output"></canvas>
+  </section>
+  <section class="panel" data-panel="help">
+    <div class="tag">help<button class="icon cog" title="Settings" aria-label="Help settings" aria-expanded="false"><svg
+          viewBox="0 0 16 16" aria-hidden="true">
+          <circle cx="8" cy="8" r="2.2" />
+          <path
+            d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4" />
+          <circle cx="8" cy="8" r="4.3" />
+        </svg></button></div>
+    <div class="settings" hidden></div>
+    <div class="screen" id="help"></div>
+  </section>
 </main>
 <div id="drop" hidden></div>
 <script type="text/plain" id="example">; Welcome to SAPF (Sound As Pure Form), a stack language for sound.
@@ -327,15 +1084,15 @@ stop                  ; stop all sound (or Esc, Mod+.)
 </script>
 <script type="module">
 
-const log = document.getElementById('log');
-const print = (s, cls) => {
-  const line = document.createElement('div');
-  line.textContent = s;
-  if (cls) line.className = cls;
-  log.append(line);
-  log.scrollTop = log.scrollHeight;
-};
-print(`; keys (Mod = Cmd/Ctrl)
+  const log = document.getElementById('log');
+  const print = (s, cls) => {
+    const line = document.createElement('div');
+    line.textContent = s;
+    if (cls) line.className = cls;
+    log.append(line);
+    log.scrollTop = log.scrollHeight;
+  };
+  print(`; keys (Mod = Cmd/Ctrl)
 ;   Mod+Enter        eval line / selection
 ;   Shift+Enter      eval ( ) block
 ;   Mod+Shift+Enter  eval paragraph
@@ -347,403 +1104,403 @@ print(`; keys (Mod = Cmd/Ctrl)
 ; hover a word for docs. "Solo" stops the
 ; current sound before code that plays.
 `, 'dim');
-import createSapf from './build/sapf.mjs';
-import { createEditor, lineAt, blockAt, paragraphAt, playsSound, docs } from './build/editor.js';
+  import createSapf from './build/sapf.mjs';
+  import { createEditor, lineAt, blockAt, paragraphAt, playsSound, docs } from './build/editor.js';
 
-// Code is evaluated on a wasm pthread and audio renders in a Wasm Audio Worklet; both share
-// memory, which needs cross-origin isolation (serve with web/serve.py).
-if (!crossOriginIsolated) print('This page needs cross-origin isolation (COOP/COEP headers). Serve it with web/serve.py.', 'err');
-// Safari (16.4+) plays Web Audio as 'ambient' sound by default, which the silent switch mutes; it was
-// also silent on a Bluetooth headset. 'playback' is how music apps play.
-if (navigator.audioSession) navigator.audioSession.type = 'playback';
-const sapfReady = createSapf({ print, printErr: s => print(s, 'err') });
-let sapf, ctx;
+  // Code is evaluated on a wasm pthread and audio renders in a Wasm Audio Worklet; both share
+  // memory, which needs cross-origin isolation (serve with web/serve.py).
+  if (!crossOriginIsolated) print('This page needs cross-origin isolation (COOP/COEP headers). Serve it with web/serve.py.', 'err');
+  // Safari (16.4+) plays Web Audio as 'ambient' sound by default, which the silent switch mutes; it was
+  // also silent on a Bluetooth headset. 'playback' is how music apps play.
+  if (navigator.audioSession) navigator.audioSession.type = 'playback';
+  const sapfReady = createSapf({ print, printErr: s => print(s, 'err') });
+  let sapf, ctx;
 
-// `slider` / `xslider` (sapf_web.cpp) call this each time they run: one row per name, kept across runs.
-const controls = document.getElementById('controls'), rows = [];
-// Fixed decimals per slider, so the label keeps its width while dragging: enough to show about
-// 1/1000 of the range (for xslider, of the range's low end, where steps are finest), but no
-// more than keep the widest value within 8 characters, what the value column fits.
-function decimals(lo, hi, exp) {
-  const res = (exp ? Math.min(Math.abs(lo), Math.abs(hi)) * Math.abs(Math.log(hi / lo)) : Math.abs(hi - lo)) / 1000;
-  const want = res > 0 ? Math.ceil(-Math.log10(res) - 1e-9) : 2;
-  const whole = String(Math.round(Math.max(Math.abs(lo), Math.abs(hi)))).length + (lo < 0); // digits + sign
-  return Math.max(0, Math.min(want, 8 - whole - 1)); // - 1 for the point
-}
-const fmt = (v, d) => v.toFixed(d).replace(/^-(?=[0.]*$)/, ''); // no "-0.000"
-function onSapfSlider(id, name, lo, hi, value, exp) {
-  let row = rows[id];
-  // Same range: sapf left the value alone, and `value` may predate a drag in flight.
-  if (row && row.range === `${lo} ${hi} ${exp}`) return;
-  if (!row) {
-    row = rows[id] = document.createElement('label');
-    row.innerHTML = '<span></span><input type="range" min="0" max="1" step="any"><output></output>';
-    controls.append(row);
+  // `slider` / `xslider` (sapf_web.cpp) call this each time they run: one row per name, kept across runs.
+  const controls = document.getElementById('controls'), rows = [];
+  // Fixed decimals per slider, so the label keeps its width while dragging: enough to show about
+  // 1/1000 of the range (for xslider, of the range's low end, where steps are finest), but no
+  // more than keep the widest value within 8 characters, what the value column fits.
+  function decimals(lo, hi, exp) {
+    const res = (exp ? Math.min(Math.abs(lo), Math.abs(hi)) * Math.abs(Math.log(hi / lo)) : Math.abs(hi - lo)) / 1000;
+    const want = res > 0 ? Math.ceil(-Math.log10(res) - 1e-9) : 2;
+    const whole = String(Math.round(Math.max(Math.abs(lo), Math.abs(hi)))).length + (lo < 0); // digits + sign
+    return Math.max(0, Math.min(want, 8 - whole - 1)); // - 1 for the point
   }
-  const [label, input, output] = row.children;
-  const toValue = p => exp ? lo * (hi / lo) ** p : lo + p * (hi - lo);
-  const toPos = v => hi === lo ? 0 : exp ? Math.log(v / lo) / Math.log(hi / lo) : (v - lo) / (hi - lo);
-  const d = decimals(lo, hi, exp);
-  row.range = `${lo} ${hi} ${exp}`;
-  label.textContent = name;
-  input.value = toPos(value);
-  output.textContent = fmt(value, d);
-  input.oninput = () => { const v = toValue(+input.value); output.textContent = fmt(v, d); sapf._sapf_set_ctl(id, v); };
-}
-
-// Reads the file when asked, so the page keeps no second copy of what sapf's in-memory FS holds.
-// Only the latest download's blob stays alive: freeing it on a timer could beat a slow save dialog.
-let downloadUrl;
-function download(path) {
-  let data;
-  try { data = sapf.FS.readFile(path); } catch { return print(`no file '${path}'`, 'err'); }
-  if (downloadUrl) URL.revokeObjectURL(downloadUrl);
-  const a = document.createElement('a');
-  a.href = downloadUrl = URL.createObjectURL(new Blob([data]));
-  a.download = path.split('/').pop();
-  a.click();
-}
-
-// `open <file>` (>sfo, sgram, prelude; see system() in sapf_web.cpp) puts a download link in the
-// console. It also downloads at once while the key press that ran the code still counts as a user
-// action: later downloads without one make Chrome ask, and they fail silently once refused.
-function onSapfOpen(path) {
-  if (path === '/sapf-prelude.txt') return openPrelude(); // the `prelude` op: edit my prelude
-  const auto = navigator.userActivation?.isActive;
-  const a = document.createElement('a');
-  a.href = '#';
-  a.textContent = path.split('/').pop();
-  a.onclick = e => { e.preventDefault(); download(path); };
-  const line = document.createElement('div');
-  line.append(auto ? 'downloading ' : 'click to download ', a);
-  log.append(line);
-  log.scrollTop = log.scrollHeight;
-  if (auto) download(path);
-}
-
-// mousex, mousey, xmousex, ...: the pointer's position in the window, clamped to [0,1] (captured
-// drags report points outside it), y = 1 at the top. Tracked from load, before audio starts.
-const clamp01 = v => v > 0 ? Math.min(1, v) : 0; // NaN (0-sized window) -> 0
-sapfReady.then(m => addEventListener('pointermove', e =>
-  m._sapf_set_mouse(clamp01(e.clientX / innerWidth), clamp01(1 - e.clientY / innerHeight))))
-  .catch(() => {}); // a failed load surfaces where run() awaits it
-
-// Sound bank: files in /sounds in sapf's file system, which is the working directory, so
-// `"blip.wav" sf>` reads one. Built-in sounds come from web/sounds; uploads are kept in IndexedDB
-// ('sapf-web' / 'sounds') so they survive a reload, and written to /sounds when the page loads.
-const BUILTIN = ['blip.wav'], SOUNDS = '/sounds';
-const SNDFILE = /\.(wav|wave|aiff?|aifc|caf|au|snd|w64|rf64)$/i; // what sapf's libsndfile reads (no MP3/Ogg/FLAC codecs)
-const userSounds = new Set(), builtinSounds = new Set(); // builtinSounds: the built-ins that loaded
-const soundChannels = new Map(); // name -> channel count, for the Sounds menu
-// Channel count from a WAV (RIFF/RF64) or AIFF header. shortcut: other formats (CAF, AU, W64) get
-// no count, so no mono/stereo label; read their headers too if they are uploaded much.
-function channelsOf(d) {
-  const v = new DataView(d.buffer, d.byteOffset, d.byteLength), id = at => String.fromCharCode(...d.subarray(at, at + 4));
-  const riff = /^(RIFF|RF64)$/.test(id(0)), aiff = id(0) === 'FORM' && /^AIF[FC]$/.test(id(8));
-  if (!riff && !aiff) return;
-  for (let at = 12; at + 8 <= d.length; ) { // chunks: 4-byte id, 4-byte size (LE in RIFF, BE in AIFF), even-padded
-    if (id(at) === (riff ? 'fmt ' : 'COMM')) return riff ? v.getUint16(at + 10, true) : v.getInt16(at + 8);
-    const size = v.getUint32(at + 4, riff);
-    at += 8 + size + (size & 1);
+  const fmt = (v, d) => v.toFixed(d).replace(/^-(?=[0.]*$)/, ''); // no "-0.000"
+  function onSapfSlider(id, name, lo, hi, value, exp) {
+    let row = rows[id];
+    // Same range: sapf left the value alone, and `value` may predate a drag in flight.
+    if (row && row.range === `${lo} ${hi} ${exp}`) return;
+    if (!row) {
+      row = rows[id] = document.createElement('label');
+      row.innerHTML = '<span></span><input type="range" min="0" max="1" step="any"><output></output>';
+      controls.append(row);
+    }
+    const [label, input, output] = row.children;
+    const toValue = p => exp ? lo * (hi / lo) ** p : lo + p * (hi - lo);
+    const toPos = v => hi === lo ? 0 : exp ? Math.log(v / lo) / Math.log(hi / lo) : (v - lo) / (hi - lo);
+    const d = decimals(lo, hi, exp);
+    row.range = `${lo} ${hi} ${exp}`;
+    label.textContent = name;
+    input.value = toPos(value);
+    output.textContent = fmt(value, d);
+    input.oninput = () => { const v = toValue(+input.value); output.textContent = fmt(v, d); sapf._sapf_set_ctl(id, v); };
   }
-}
-function putSound(m, name, data) {
-  m.FS.writeFile(`${SOUNDS}/${name}`, data);
-  try { soundChannels.set(name, channelsOf(data)); } catch { soundChannels.delete(name); } // truncated header
-}
-// Never leaves the promise pending: run() waits on the sound bank, so a hang would stop Run for good.
-const idb = (mode, f) => new Promise((ok, fail) => {
-  const open = indexedDB.open('sapf-web', 1);
-  open.onupgradeneeded = () => open.result.createObjectStore('sounds', { keyPath: 'name' });
-  open.onerror = () => fail(open.error);
-  open.onsuccess = () => {
-    const db = open.result;
+
+  // Reads the file when asked, so the page keeps no second copy of what sapf's in-memory FS holds.
+  // Only the latest download's blob stays alive: freeing it on a timer could beat a slow save dialog.
+  let downloadUrl;
+  function download(path) {
+    let data;
+    try { data = sapf.FS.readFile(path); } catch { return print(`no file '${path}'`, 'err'); }
+    if (downloadUrl) URL.revokeObjectURL(downloadUrl);
+    const a = document.createElement('a');
+    a.href = downloadUrl = URL.createObjectURL(new Blob([data]));
+    a.download = path.split('/').pop();
+    a.click();
+  }
+
+  // `open <file>` (>sfo, sgram, prelude; see system() in sapf_web.cpp) puts a download link in the
+  // console. It also downloads at once while the key press that ran the code still counts as a user
+  // action: later downloads without one make Chrome ask, and they fail silently once refused.
+  function onSapfOpen(path) {
+    if (path === '/sapf-prelude.txt') return openPrelude(); // the `prelude` op: edit my prelude
+    const auto = navigator.userActivation?.isActive;
+    const a = document.createElement('a');
+    a.href = '#';
+    a.textContent = path.split('/').pop();
+    a.onclick = e => { e.preventDefault(); download(path); };
+    const line = document.createElement('div');
+    line.append(auto ? 'downloading ' : 'click to download ', a);
+    log.append(line);
+    log.scrollTop = log.scrollHeight;
+    if (auto) download(path);
+  }
+
+  // mousex, mousey, xmousex, ...: the pointer's position in the window, clamped to [0,1] (captured
+  // drags report points outside it), y = 1 at the top. Tracked from load, before audio starts.
+  const clamp01 = v => v > 0 ? Math.min(1, v) : 0; // NaN (0-sized window) -> 0
+  sapfReady.then(m => addEventListener('pointermove', e =>
+    m._sapf_set_mouse(clamp01(e.clientX / innerWidth), clamp01(1 - e.clientY / innerHeight))))
+    .catch(() => { }); // a failed load surfaces where run() awaits it
+
+  // Sound bank: files in /sounds in sapf's file system, which is the working directory, so
+  // `"blip.wav" sf>` reads one. Built-in sounds come from web/sounds; uploads are kept in IndexedDB
+  // ('sapf-web' / 'sounds') so they survive a reload, and written to /sounds when the page loads.
+  const BUILTIN = ['blip.wav'], SOUNDS = '/sounds';
+  const SNDFILE = /\.(wav|wave|aiff?|aifc|caf|au|snd|w64|rf64)$/i; // what sapf's libsndfile reads (no MP3/Ogg/FLAC codecs)
+  const userSounds = new Set(), builtinSounds = new Set(); // builtinSounds: the built-ins that loaded
+  const soundChannels = new Map(); // name -> channel count, for the Sounds menu
+  // Channel count from a WAV (RIFF/RF64) or AIFF header. shortcut: other formats (CAF, AU, W64) get
+  // no count, so no mono/stereo label; read their headers too if they are uploaded much.
+  function channelsOf(d) {
+    const v = new DataView(d.buffer, d.byteOffset, d.byteLength), id = at => String.fromCharCode(...d.subarray(at, at + 4));
+    const riff = /^(RIFF|RF64)$/.test(id(0)), aiff = id(0) === 'FORM' && /^AIF[FC]$/.test(id(8));
+    if (!riff && !aiff) return;
+    for (let at = 12; at + 8 <= d.length;) { // chunks: 4-byte id, 4-byte size (LE in RIFF, BE in AIFF), even-padded
+      if (id(at) === (riff ? 'fmt ' : 'COMM')) return riff ? v.getUint16(at + 10, true) : v.getInt16(at + 8);
+      const size = v.getUint32(at + 4, riff);
+      at += 8 + size + (size & 1);
+    }
+  }
+  function putSound(m, name, data) {
+    m.FS.writeFile(`${SOUNDS}/${name}`, data);
+    try { soundChannels.set(name, channelsOf(data)); } catch { soundChannels.delete(name); } // truncated header
+  }
+  // Never leaves the promise pending: run() waits on the sound bank, so a hang would stop Run for good.
+  const idb = (mode, f) => new Promise((ok, fail) => {
+    const open = indexedDB.open('sapf-web', 1);
+    open.onupgradeneeded = () => open.result.createObjectStore('sounds', { keyPath: 'name' });
+    open.onerror = () => fail(open.error);
+    open.onsuccess = () => {
+      const db = open.result;
+      try {
+        const tx = db.transaction('sounds', mode), req = f(tx.objectStore('sounds'));
+        tx.oncomplete = () => { db.close(); ok(req.result); };
+        tx.onabort = () => { db.close(); fail(tx.error); };
+      } catch (e) { db.close(); fail(e); }
+    };
+  });
+  async function addBuiltin(m, name) {
     try {
-      const tx = db.transaction('sounds', mode), req = f(tx.objectStore('sounds'));
-      tx.oncomplete = () => { db.close(); ok(req.result); };
-      tx.onabort = () => { db.close(); fail(tx.error); };
-    } catch (e) { db.close(); fail(e); }
-  };
-});
-async function addBuiltin(m, name) {
-  try {
-    const r = await fetch('sounds/' + name);
-    if (!r.ok) throw r.status;
-    const data = new Uint8Array(await r.arrayBuffer());
-    if (!userSounds.has(name)) putSound(m, name, data);
-    builtinSounds.add(name);
-  } catch { print(`Could not load the built-in sound ${name}`, 'err'); }
-}
-const soundsReady = sapfReady.then(async m => {
-  m.FS.mkdir(SOUNDS);
-  m.FS.chdir(SOUNDS);
-  try {
-    for (const { name, data } of await idb('readonly', s => s.getAll())) { putSound(m, name, data); userSounds.add(name); }
-  } catch { print('Browser storage is blocked: uploaded sounds are not kept after a reload.', 'err'); }
-  await Promise.all(BUILTIN.map(name => addBuiltin(m, name)));
-  return m;
-});
-
-// An AudioBuffer as a 32-bit float WAV, for formats the browser decodes but libsndfile does not.
-function wav(b) {
-  const ch = b.numberOfChannels, size = b.length * ch * 4, v = new DataView(new ArrayBuffer(44 + size));
-  const str = (at, s) => [...s].forEach((c, i) => v.setUint8(at + i, c.charCodeAt(0)));
-  str(0, 'RIFF'); v.setUint32(4, 36 + size, true); str(8, 'WAVEfmt '); v.setUint32(16, 16, true);
-  v.setUint16(20, 3, true); v.setUint16(22, ch, true); v.setUint32(24, b.sampleRate, true); // 3: IEEE float
-  v.setUint32(28, b.sampleRate * ch * 4, true); v.setUint16(32, ch * 4, true); v.setUint16(34, 32, true);
-  str(36, 'data'); v.setUint32(40, size, true);
-  for (let c = 0; c < ch; ++c) {
-    const d = b.getChannelData(c);
-    for (let i = 0; i < b.length; ++i) v.setFloat32(44 + (i * ch + c) * 4, d[i], true);
+      const r = await fetch('sounds/' + name);
+      if (!r.ok) throw r.status;
+      const data = new Uint8Array(await r.arrayBuffer());
+      if (!userSounds.has(name)) putSound(m, name, data);
+      builtinSounds.add(name);
+    } catch { print(`Could not load the built-in sound ${name}`, 'err'); }
   }
-  return new Uint8Array(v.buffer);
-}
+  const soundsReady = sapfReady.then(async m => {
+    m.FS.mkdir(SOUNDS);
+    m.FS.chdir(SOUNDS);
+    try {
+      for (const { name, data } of await idb('readonly', s => s.getAll())) { putSound(m, name, data); userSounds.add(name); }
+    } catch { print('Browser storage is blocked: uploaded sounds are not kept after a reload.', 'err'); }
+    await Promise.all(BUILTIN.map(name => addBuiltin(m, name)));
+    return m;
+  });
 
-async function addSounds(files) {
-  const m = await soundsReady;
-  for (const file of files) {
-    let name = file.name.replace(/["/\\]/g, '_'), data = new Uint8Array(await file.arrayBuffer()); // `"` would end the sapf string
-    if (!SNDFILE.test(name)) try {
-      data = wav(await new OfflineAudioContext(1, 1, 48000).decodeAudioData(data.buffer));
-      name = name.replace(/\.[^.]*$/, '') + '.wav';
-    } catch { print(`Could not decode ${file.name}: not an audio file this browser can read.`, 'err'); continue; }
-    // Compressed uploads become .wav, so "kick.mp3" and "kick.ogg" share a name.
-    if ((userSounds.has(name) || builtinSounds.has(name)) && !confirm(`Replace the sound "${name}" with ${file.name}?`)) continue;
-    putSound(m, name, data);
-    userSounds.add(name);
-    try { await idb('readwrite', s => s.put({ name, data })); }
-    catch { print(`${name} is loaded for this session only: browser storage is full or blocked.`, 'err'); }
-    print(`; added "${name}" sf>`, 'dim');
+  // An AudioBuffer as a 32-bit float WAV, for formats the browser decodes but libsndfile does not.
+  function wav(b) {
+    const ch = b.numberOfChannels, size = b.length * ch * 4, v = new DataView(new ArrayBuffer(44 + size));
+    const str = (at, s) => [...s].forEach((c, i) => v.setUint8(at + i, c.charCodeAt(0)));
+    str(0, 'RIFF'); v.setUint32(4, 36 + size, true); str(8, 'WAVEfmt '); v.setUint32(16, 16, true);
+    v.setUint16(20, 3, true); v.setUint16(22, ch, true); v.setUint32(24, b.sampleRate, true); // 3: IEEE float
+    v.setUint32(28, b.sampleRate * ch * 4, true); v.setUint16(32, ch * 4, true); v.setUint16(34, 32, true);
+    str(36, 'data'); v.setUint32(40, size, true);
+    for (let c = 0; c < ch; ++c) {
+      const d = b.getChannelData(c);
+      for (let i = 0; i < b.length; ++i) v.setFloat32(44 + (i * ch + c) * 4, d[i], true);
+    }
+    return new Uint8Array(v.buffer);
   }
-}
-async function deleteSound(name) {
-  const m = await soundsReady;
-  userSounds.delete(name);
-  try { m.FS.unlink(`${SOUNDS}/${name}`); } catch {}
-  await idb('readwrite', s => s.delete(name)).catch(() => {});
-  if (BUILTIN.includes(name)) await addBuiltin(m, name); // an upload had replaced it
-}
 
-// iOS starts audio only from inside a tap or key press, synchronously: after an await the gesture
-// no longer counts and the context stays suspended. So the module is kept once loaded, and run()
-// starts and resumes audio before its first await.
-let loaded;
-soundsReady.then(m => loaded = m, () => {});
-function startAudio(m) {
-  sapf = m;
-  sapf.onSapfSlider = onSapfSlider;
-  sapf.onSapfOpen = onSapfOpen;
-  // An absolute path: the working directory is /sounds.
-  ctx = sapf.emscriptenGetAudioObject(sapf.ccall('sapf_start_audio', 'number', ['string'], ['/sapf-prelude.txt']));
-  // My prelude (File > my prelude) loads next, through `load` like the built-in one. loadFile drops
-  // the file's last byte, hence the newline.
-  const mine = store.get('file:' + PRELUDE);
-  if (mine?.trim()) {
-    sapf.FS.writeFile('/my-prelude.txt', mine + '\n');
-    sapf.ccall('sapf_eval', null, ['string'], ['"/my-prelude.txt" load\n']);
+  async function addSounds(files) {
+    const m = await soundsReady;
+    for (const file of files) {
+      let name = file.name.replace(/["/\\]/g, '_'), data = new Uint8Array(await file.arrayBuffer()); // `"` would end the sapf string
+      if (!SNDFILE.test(name)) try {
+        data = wav(await new OfflineAudioContext(1, 1, 48000).decodeAudioData(data.buffer));
+        name = name.replace(/\.[^.]*$/, '') + '.wav';
+      } catch { print(`Could not decode ${file.name}: not an audio file this browser can read.`, 'err'); continue; }
+      // Compressed uploads become .wav, so "kick.mp3" and "kick.ogg" share a name.
+      if ((userSounds.has(name) || builtinSounds.has(name)) && !confirm(`Replace the sound "${name}" with ${file.name}?`)) continue;
+      putSound(m, name, data);
+      userSounds.add(name);
+      try { await idb('readwrite', s => s.put({ name, data })); }
+      catch { print(`${name} is loaded for this session only: browser storage is full or blocked.`, 'err'); }
+      print(`; added "${name}" sf>`, 'dim');
+    }
   }
-  window.sapf = sapf; window.sapfCtx = ctx; // for debugging in devtools
-  // The worklet node appears once its thread starts; tap it then. The analysers' default
-  // channelCountMode 'max' downmixes stereo to mono, (L+R)/2. The waveform gets its own, with the
-  // longest buffer (drawWave keeps a longer history from it); the spectrum keeps a 4096-point FFT.
-  const tap = () => {
-    const h = sapf._sapf_audio_node();
-    if (!h) return setTimeout(tap, 50);
-    analyser = new AnalyserNode(ctx, { fftSize: 4096, smoothingTimeConstant: .5, minDecibels: -100, maxDecibels: -10 });
-    waveAn = new AnalyserNode(ctx, { fftSize: 32768 });
-    vizNode = sapf.emscriptenGetAudioObject(h);
-    wire();
-  };
-  tap();
-}
+  async function deleteSound(name) {
+    const m = await soundsReady;
+    userSounds.delete(name);
+    try { m.FS.unlink(`${SOUNDS}/${name}`); } catch { }
+    await idb('readwrite', s => s.delete(name)).catch(() => { });
+    if (BUILTIN.includes(name)) await addBuiltin(m, name); // an upload had replaced it
+  }
 
-// Scope (a waveform, triggered on a rising zero crossing so periodic sounds stand still) and
-// spectrum (a waterfall: columns scrolling left, log frequency from 20 Hz at the bottom to Nyquist
-// at the top, -100 to -10 dB as colour), each on its own canvas.
-const scope = document.getElementById('scope'), sg = scope.getContext('2d');
-const fall = document.getElementById('fall'), fg = fall.getContext('2d');
-// The waterfall's history, kept off screen so resizing the visible canvas does not clear it.
-// 0x0 at first, so the first frame sets col and rowMax.
-let wf = Object.assign(document.createElement('canvas'), { width: 0, height: 0 }), wg = wf.getContext('2d');
-// black -> indigo -> teal -> phosphor -> amber -> red -> white (the page's own accents), 256 steps
-const stops = [[0, 7, 10, 8], [.2, 30, 36, 92], [.4, 24, 128, 140], [.58, 126, 231, 135], [.74, 255, 180, 84], [.88, 255, 123, 114], [1, 255, 240, 230]];
-const lut = new Uint8ClampedArray(256 * 3);
-for (let i = 0; i < 256; i++) {
-  const v = i / 255, k = stops.findIndex(s => s[0] >= v), [a, b] = [stops[Math.max(0, k - 1)], stops[k]];
-  const f = b[0] > a[0] ? (v - a[0]) / (b[0] - a[0]) : 0;
-  for (let c = 1; c < 4; c++) lut[i * 3 + c - 1] = a[c] + f * (b[c] - a[c]);
-}
-let analyser, waveAn, waveWin, hist, waveT = 0, spec, col, rowMax, last, acc = 0;
-// Each panel's time span and level, set in its settings and kept in the browser: the waveform's
-// width in ms and its gain; the waterfall's history in seconds and its boost in dB, which lifts quiet
-// partials into the colours (and pushes loud ones to white).
-const SPAN = [[1, 2000], [1, 60]], LEVEL = [[1 / 8, 64], [-30, 60]];
-const spans = [20, 10], levels = [1, 0], KEYS = [['scopeMs', 'scopeGain'], ['fallSec', 'fallDb']];
-const clampTo = ([lo, hi], v) => Math.max(lo, Math.min(hi, v));
-// Sets a panel's span and level, rounded as shown, and keeps them.
-function tune(side, s, l) {
-  s = clampTo(SPAN[side], s);
-  spans[side] = +s.toPrecision(s < 10 ? 2 : 3);
-  levels[side] = side ? Math.round(clampTo(LEVEL[1], l)) : +clampTo(LEVEL[0], l).toPrecision(2);
-  KEYS[side].forEach((k, i) => store.set(k, [spans, levels][i][side]));
-}
-const vizText = side => [side ? `${spans[1]} s` : spans[0] >= 1000 ? `${spans[0] / 1000} s` : `${spans[0]} ms`,
+  // iOS starts audio only from inside a tap or key press, synchronously: after an await the gesture
+  // no longer counts and the context stays suspended. So the module is kept once loaded, and run()
+  // starts and resumes audio before its first await.
+  let loaded;
+  soundsReady.then(m => loaded = m, () => { });
+  function startAudio(m) {
+    sapf = m;
+    sapf.onSapfSlider = onSapfSlider;
+    sapf.onSapfOpen = onSapfOpen;
+    // An absolute path: the working directory is /sounds.
+    ctx = sapf.emscriptenGetAudioObject(sapf.ccall('sapf_start_audio', 'number', ['string'], ['/sapf-prelude.txt']));
+    // My prelude (File > my prelude) loads next, through `load` like the built-in one. loadFile drops
+    // the file's last byte, hence the newline.
+    const mine = store.get('file:' + PRELUDE);
+    if (mine?.trim()) {
+      sapf.FS.writeFile('/my-prelude.txt', mine + '\n');
+      sapf.ccall('sapf_eval', null, ['string'], ['"/my-prelude.txt" load\n']);
+    }
+    window.sapf = sapf; window.sapfCtx = ctx; // for debugging in devtools
+    // The worklet node appears once its thread starts; tap it then. The analysers' default
+    // channelCountMode 'max' downmixes stereo to mono, (L+R)/2. The waveform gets its own, with the
+    // longest buffer (drawWave keeps a longer history from it); the spectrum keeps a 4096-point FFT.
+    const tap = () => {
+      const h = sapf._sapf_audio_node();
+      if (!h) return setTimeout(tap, 50);
+      analyser = new AnalyserNode(ctx, { fftSize: 4096, smoothingTimeConstant: .5, minDecibels: -100, maxDecibels: -10 });
+      waveAn = new AnalyserNode(ctx, { fftSize: 32768 });
+      vizNode = sapf.emscriptenGetAudioObject(h);
+      wire();
+    };
+    tap();
+  }
+
+  // Scope (a waveform, triggered on a rising zero crossing so periodic sounds stand still) and
+  // spectrum (a waterfall: columns scrolling left, log frequency from 20 Hz at the bottom to Nyquist
+  // at the top, -100 to -10 dB as colour), each on its own canvas.
+  const scope = document.getElementById('scope'), sg = scope.getContext('2d');
+  const fall = document.getElementById('fall'), fg = fall.getContext('2d');
+  // The waterfall's history, kept off screen so resizing the visible canvas does not clear it.
+  // 0x0 at first, so the first frame sets col and rowMax.
+  let wf = Object.assign(document.createElement('canvas'), { width: 0, height: 0 }), wg = wf.getContext('2d');
+  // black -> indigo -> teal -> phosphor -> amber -> red -> white (the page's own accents), 256 steps
+  const stops = [[0, 7, 10, 8], [.2, 30, 36, 92], [.4, 24, 128, 140], [.58, 126, 231, 135], [.74, 255, 180, 84], [.88, 255, 123, 114], [1, 255, 240, 230]];
+  const lut = new Uint8ClampedArray(256 * 3);
+  for (let i = 0; i < 256; i++) {
+    const v = i / 255, k = stops.findIndex(s => s[0] >= v), [a, b] = [stops[Math.max(0, k - 1)], stops[k]];
+    const f = b[0] > a[0] ? (v - a[0]) / (b[0] - a[0]) : 0;
+    for (let c = 1; c < 4; c++) lut[i * 3 + c - 1] = a[c] + f * (b[c] - a[c]);
+  }
+  let analyser, waveAn, waveWin, hist, waveT = 0, spec, col, rowMax, last, acc = 0;
+  // Each panel's time span and level, set in its settings and kept in the browser: the waveform's
+  // width in ms and its gain; the waterfall's history in seconds and its boost in dB, which lifts quiet
+  // partials into the colours (and pushes loud ones to white).
+  const SPAN = [[1, 2000], [1, 60]], LEVEL = [[1 / 8, 64], [-30, 60]];
+  const spans = [20, 10], levels = [1, 0], KEYS = [['scopeMs', 'scopeGain'], ['fallSec', 'fallDb']];
+  const clampTo = ([lo, hi], v) => Math.max(lo, Math.min(hi, v));
+  // Sets a panel's span and level, rounded as shown, and keeps them.
+  function tune(side, s, l) {
+    s = clampTo(SPAN[side], s);
+    spans[side] = +s.toPrecision(s < 10 ? 2 : 3);
+    levels[side] = side ? Math.round(clampTo(LEVEL[1], l)) : +clampTo(LEVEL[0], l).toPrecision(2);
+    KEYS[side].forEach((k, i) => store.set(k, [spans, levels][i][side]));
+  }
+  const vizText = side => [side ? `${spans[1]} s` : spans[0] >= 1000 ? `${spans[0] / 1000} s` : `${spans[0]} ms`,
   side ? `${levels[1] > 0 ? '+' : ''}${levels[1]} dB` : `×${levels[0]}`];
-// Sizes a canvas's pixels to its box; false when it has no room (hidden or collapsed).
-function fit(c) {
-  const W = c.clientWidth * devicePixelRatio | 0, H = c.clientHeight * devicePixelRatio | 0;
-  if (W < 8 || H < 8) return false;
-  if (c.width !== W || c.height !== H) { c.width = W; c.height = H; }
-  return true;
-}
-// Only shown panels are fed and drawn: a hidden one's analyser is disconnected and its history
-// dropped, so it comes back empty, and with both hidden the frame loop stops.
-let vizNode, vizLoop = false;
-const fed = new Set();
-function wire() {
-  if (!vizNode) return; // audio not started: tap() calls this
-  for (const [an, c] of [[waveAn, scope], [analyser, fall]]) {
-    const on = !c.closest('.panel').hidden;
-    if (on === fed.has(an)) continue;
-    if (on) { vizNode.connect(an); fed.add(an); continue; }
-    vizNode.disconnect(an); fed.delete(an);
-    c.width = 0; // clears what it showed; fit() sizes it again when it is back
-    if (c === scope) hist?.fill(0); else wf.width = 0; // drawFall starts a fresh waterfall
+  // Sizes a canvas's pixels to its box; false when it has no room (hidden or collapsed).
+  function fit(c) {
+    const W = c.clientWidth * devicePixelRatio | 0, H = c.clientHeight * devicePixelRatio | 0;
+    if (W < 8 || H < 8) return false;
+    if (c.width !== W || c.height !== H) { c.width = W; c.height = H; }
+    return true;
   }
-  if (fed.size && !vizLoop) { vizLoop = true; last = undefined; requestAnimationFrame(drawViz); }
-}
-function drawViz(now) {
-  vizLoop = fed.size > 0;
-  if (!vizLoop) return;
-  requestAnimationFrame(drawViz);
-  const dt = Math.min(250, now - (last ?? now)); last = now; // capped: a hidden tab's stall adds no burst of columns
-  if (fit(scope)) drawWave();
-  if (fit(fall)) drawFall(dt);
-}
-// The newest `span` samples that start on a rising zero crossing (searching back), the trigger at
-// the left edge; drawn as each pixel column's min and max so long spans keep their peaks. Short spans place the crossing between samples, so
-// the trace holds still rather than jumping a whole sample's width from frame to frame.
-// The analyser holds 32768 samples (its most), with half kept to search back for the crossing: about
-// 340 ms at 48 kHz. Longer spans read `hist`, twice the longest span, which each frame appends the
-// samples played since the last one (by the audio clock) from the analyser's window.
-// shortcut: the clock and the analyser can disagree by a 128-sample block, a seam too small to see at
-// the spans that use hist; tap the samples in an AudioWorklet if it ever shows.
-function drawWave() {
-  const W = scope.width, H = scope.height, pad = 4 * devicePixelRatio | 0, sw = W - 2 * pad;
-  const sr = ctx.sampleRate, m = waveAn.fftSize;
-  waveWin ??= new Float32Array(m);
-  hist ??= new Float32Array(Math.ceil(2 * SPAN[0][1] / 1000 * sr));
-  waveAn.getFloatTimeDomainData(waveWin);
-  // After a stall longer than the analyser's window (a background tab), what it missed stays flat, so time keeps its scale.
-  const t1 = ctx.currentTime, k = Math.min(hist.length, Math.round((t1 - waveT) * sr)), got = Math.min(k, m);
-  waveT = t1;
-  if (k > 0) { hist.copyWithin(0, k); hist.fill(0, hist.length - k, hist.length - got); hist.set(waveWin.subarray(m - got), hist.length - got); }
-  sg.clearRect(0, 0, W, H);
-  const want = Math.round(spans[0] / 1000 * sr), wave = want <= m >> 1 ? waveWin : hist, n = wave.length;
-  const span = Math.min(n >> 1, want);
-  // c: the crossing, in samples, with the whole span after it still in the buffer; with no crossing
-  // (silence, or a sound too low for the span), the newest span.
-  let c = n - span;
-  for (let i = n - span; i > 0; i--)
-    if (wave[i - 1] <= 0 && wave[i] > 0) { c = i - 1 + wave[i - 1] / (wave[i - 1] - wave[i]); break; }
-  const t = Math.floor(c);
-  const gain = levels[0], yOf = v => H / 2 - Math.max(-1, Math.min(1, v * gain)) * (H / 2 - pad);
-  sg.beginPath();
-  if (span <= sw) { // short spans: a line through the samples, edge to edge, sample c at the left edge
-    const dx = sw / span, s0 = Math.max(0, Math.floor(c - pad / dx)), s1 = Math.min(n - 1, Math.ceil(c + (W - pad) / dx));
-    for (let i = s0; i <= s1; i++) {
-      const x = pad + (i - c) * dx, y = yOf(wave[i]);
-      i > s0 ? sg.lineTo(x, y) : sg.moveTo(x, y);
+  // Only shown panels are fed and drawn: a hidden one's analyser is disconnected and its history
+  // dropped, so it comes back empty, and with both hidden the frame loop stops.
+  let vizNode, vizLoop = false;
+  const fed = new Set();
+  function wire() {
+    if (!vizNode) return; // audio not started: tap() calls this
+    for (const [an, c] of [[waveAn, scope], [analyser, fall]]) {
+      const on = !c.closest('.panel').hidden;
+      if (on === fed.has(an)) continue;
+      if (on) { vizNode.connect(an); fed.add(an); continue; }
+      vizNode.disconnect(an); fed.delete(an);
+      c.width = 0; // clears what it showed; fit() sizes it again when it is back
+      if (c === scope) hist?.fill(0); else wf.width = 0; // drawFall starts a fresh waterfall
     }
+    if (fed.size && !vizLoop) { vizLoop = true; last = undefined; requestAnimationFrame(drawViz); }
   }
-  else for (let x = 0; x < sw; x++) {
-    const i0 = t + Math.floor(x / sw * span), i1 = Math.max(i0 + 1, t + Math.floor((x + 1) / sw * span));
-    let mn = wave[i0], mx = mn;
-    for (let i = i0 + 1; i < i1; i++) { const v = wave[i]; if (v < mn) mn = v; else if (v > mx) mx = v; }
-    x ? sg.lineTo(pad + x, yOf(mx)) : sg.moveTo(pad, yOf(mx));
-    if (mn !== mx) sg.lineTo(pad + x, yOf(mn));
+  function drawViz(now) {
+    vizLoop = fed.size > 0;
+    if (!vizLoop) return;
+    requestAnimationFrame(drawViz);
+    const dt = Math.min(250, now - (last ?? now)); last = now; // capped: a hidden tab's stall adds no burst of columns
+    if (fit(scope)) drawWave();
+    if (fit(fall)) drawFall(dt);
   }
-  sg.lineJoin = 'round'; sg.strokeStyle = '#7ee787'; sg.lineWidth = 1.5 * devicePixelRatio; sg.stroke();
-}
-// Each frame folds the spectrum into rowMax (the loudest bin per pixel row, the loudest frame
-// since the last column), and w / spans[1] columns a second scroll in at the right.
-function drawFall(dt) {
-  const w = fall.width, h = fall.height;
-  if (wf.width !== w || wf.height !== h) { // a new canvas, as resizing one clears it
-    const old = wf;
-    wf = document.createElement('canvas'); wf.width = w; wf.height = h; wg = wf.getContext('2d');
-    // keep the history: right-aligned so time keeps its scale, stretched to the new height as frequency spans it
-    if (old.width && old.height) wg.drawImage(old, w - old.width, 0, old.width, h); // drawImage throws on a 0x0 canvas
-    col = wg.createImageData(1, h); rowMax = new Float32Array(h).fill(-Infinity);
+  // The newest `span` samples that start on a rising zero crossing (searching back), the trigger at
+  // the left edge; drawn as each pixel column's min and max so long spans keep their peaks. Short spans place the crossing between samples, so
+  // the trace holds still rather than jumping a whole sample's width from frame to frame.
+  // The analyser holds 32768 samples (its most), with half kept to search back for the crossing: about
+  // 340 ms at 48 kHz. Longer spans read `hist`, twice the longest span, which each frame appends the
+  // samples played since the last one (by the audio clock) from the analyser's window.
+  // shortcut: the clock and the analyser can disagree by a 128-sample block, a seam too small to see at
+  // the spans that use hist; tap the samples in an AudioWorklet if it ever shows.
+  function drawWave() {
+    const W = scope.width, H = scope.height, pad = 4 * devicePixelRatio | 0, sw = W - 2 * pad;
+    const sr = ctx.sampleRate, m = waveAn.fftSize;
+    waveWin ??= new Float32Array(m);
+    hist ??= new Float32Array(Math.ceil(2 * SPAN[0][1] / 1000 * sr));
+    waveAn.getFloatTimeDomainData(waveWin);
+    // After a stall longer than the analyser's window (a background tab), what it missed stays flat, so time keeps its scale.
+    const t1 = ctx.currentTime, k = Math.min(hist.length, Math.round((t1 - waveT) * sr)), got = Math.min(k, m);
+    waveT = t1;
+    if (k > 0) { hist.copyWithin(0, k); hist.fill(0, hist.length - k, hist.length - got); hist.set(waveWin.subarray(m - got), hist.length - got); }
+    sg.clearRect(0, 0, W, H);
+    const want = Math.round(spans[0] / 1000 * sr), wave = want <= m >> 1 ? waveWin : hist, n = wave.length;
+    const span = Math.min(n >> 1, want);
+    // c: the crossing, in samples, with the whole span after it still in the buffer; with no crossing
+    // (silence, or a sound too low for the span), the newest span.
+    let c = n - span;
+    for (let i = n - span; i > 0; i--)
+      if (wave[i - 1] <= 0 && wave[i] > 0) { c = i - 1 + wave[i - 1] / (wave[i - 1] - wave[i]); break; }
+    const t = Math.floor(c);
+    const gain = levels[0], yOf = v => H / 2 - Math.max(-1, Math.min(1, v * gain)) * (H / 2 - pad);
+    sg.beginPath();
+    if (span <= sw) { // short spans: a line through the samples, edge to edge, sample c at the left edge
+      const dx = sw / span, s0 = Math.max(0, Math.floor(c - pad / dx)), s1 = Math.min(n - 1, Math.ceil(c + (W - pad) / dx));
+      for (let i = s0; i <= s1; i++) {
+        const x = pad + (i - c) * dx, y = yOf(wave[i]);
+        i > s0 ? sg.lineTo(x, y) : sg.moveTo(x, y);
+      }
+    }
+    else for (let x = 0; x < sw; x++) {
+      const i0 = t + Math.floor(x / sw * span), i1 = Math.max(i0 + 1, t + Math.floor((x + 1) / sw * span));
+      let mn = wave[i0], mx = mn;
+      for (let i = i0 + 1; i < i1; i++) { const v = wave[i]; if (v < mn) mn = v; else if (v > mx) mx = v; }
+      x ? sg.lineTo(pad + x, yOf(mx)) : sg.moveTo(pad, yOf(mx));
+      if (mn !== mx) sg.lineTo(pad + x, yOf(mn));
+    }
+    sg.lineJoin = 'round'; sg.strokeStyle = '#7ee787'; sg.lineWidth = 1.5 * devicePixelRatio; sg.stroke();
   }
-  spec ??= new Float32Array(analyser.frequencyBinCount);
-  analyser.getFloatFrequencyData(spec);
-  const nyq = ctx.sampleRate / 2, lo = Math.log(20), hi = Math.log(nyq), bins = spec.length, { minDecibels: dbLo, maxDecibels: dbHi } = analyser;
-  let prev = 1;
-  for (let y = 0; y < h; y++) {
-    const b = Math.min(bins, Math.ceil(Math.exp(lo + (y + 1) / h * (hi - lo)) / nyq * bins));
-    for (let i = Math.min(prev, b - 1); i < b; i++) if (spec[i] > rowMax[y]) rowMax[y] = spec[i];
-    prev = b;
-  }
-  acc += dt / 1000 * w / spans[1];
-  const k = Math.min(w, Math.floor(acc));
-  if (k > 0) {
-    acc -= k;
-    // The quietest fifth fades out to transparent, so silence shows the panel's own background (as
-    // the scope's does) instead of the colour map's flat near-black.
+  // Each frame folds the spectrum into rowMax (the loudest bin per pixel row, the loudest frame
+  // since the last column), and w / spans[1] columns a second scroll in at the right.
+  function drawFall(dt) {
+    const w = fall.width, h = fall.height;
+    if (wf.width !== w || wf.height !== h) { // a new canvas, as resizing one clears it
+      const old = wf;
+      wf = document.createElement('canvas'); wf.width = w; wf.height = h; wg = wf.getContext('2d');
+      // keep the history: right-aligned so time keeps its scale, stretched to the new height as frequency spans it
+      if (old.width && old.height) wg.drawImage(old, w - old.width, 0, old.width, h); // drawImage throws on a 0x0 canvas
+      col = wg.createImageData(1, h); rowMax = new Float32Array(h).fill(-Infinity);
+    }
+    spec ??= new Float32Array(analyser.frequencyBinCount);
+    analyser.getFloatFrequencyData(spec);
+    const nyq = ctx.sampleRate / 2, lo = Math.log(20), hi = Math.log(nyq), bins = spec.length, { minDecibels: dbLo, maxDecibels: dbHi } = analyser;
+    let prev = 1;
     for (let y = 0; y < h; y++) {
-      const i = Math.round(Math.max(0, Math.min(1, (rowMax[y] + levels[1] - dbLo) / (dbHi - dbLo))) * 255), v = i * 3, o = (h - 1 - y) * 4;
-      col.data[o] = lut[v]; col.data[o + 1] = lut[v + 1]; col.data[o + 2] = lut[v + 2]; col.data[o + 3] = Math.min(255, i * 5);
+      const b = Math.min(bins, Math.ceil(Math.exp(lo + (y + 1) / h * (hi - lo)) / nyq * bins));
+      for (let i = Math.min(prev, b - 1); i < b; i++) if (spec[i] > rowMax[y]) rowMax[y] = spec[i];
+      prev = b;
     }
-    rowMax.fill(-Infinity);
-    wg.globalCompositeOperation = 'copy'; // shift, not blend: see-through pixels would smear over the old ones
-    wg.drawImage(wf, -k, 0);
-    wg.globalCompositeOperation = 'source-over';
-    wg.putImageData(col, w - 1, 0);
-    if (k > 1) wg.drawImage(wf, w - 1, 0, 1, h, w - k, 0, k - 1, h); // short spans: one reading fills k columns
+    acc += dt / 1000 * w / spans[1];
+    const k = Math.min(w, Math.floor(acc));
+    if (k > 0) {
+      acc -= k;
+      // The quietest fifth fades out to transparent, so silence shows the panel's own background (as
+      // the scope's does) instead of the colour map's flat near-black.
+      for (let y = 0; y < h; y++) {
+        const i = Math.round(Math.max(0, Math.min(1, (rowMax[y] + levels[1] - dbLo) / (dbHi - dbLo))) * 255), v = i * 3, o = (h - 1 - y) * 4;
+        col.data[o] = lut[v]; col.data[o + 1] = lut[v + 1]; col.data[o + 2] = lut[v + 2]; col.data[o + 3] = Math.min(255, i * 5);
+      }
+      rowMax.fill(-Infinity);
+      wg.globalCompositeOperation = 'copy'; // shift, not blend: see-through pixels would smear over the old ones
+      wg.drawImage(wf, -k, 0);
+      wg.globalCompositeOperation = 'source-over';
+      wg.putImageData(col, w - 1, 0);
+      if (k > 1) wg.drawImage(wf, w - 1, 0, 1, h, w - k, 0, k - 1, h); // short spans: one reading fills k columns
+    }
+    fg.clearRect(0, 0, w, h);
+    fg.drawImage(wf, 0, 0);
   }
-  fg.clearRect(0, 0, w, h);
-  fg.drawImage(wf, 0, 0);
-}
 
 
-async function run(src) {
-  if (!ctx && loaded) startAudio(loaded);
-  ctx?.resume(); // not awaited: an await before it would leave the gesture
-  if (!ctx) { const m = await soundsReady; if (!ctx) startAudio(m); } // Run before the module loaded: the unlock below resumes it
-  print('> ' + src.trim(), 'in');
-  sapf.ccall('sapf_eval', null, ['string'], [src + '\n']);
-}
+  async function run(src) {
+    if (!ctx && loaded) startAudio(loaded);
+    ctx?.resume(); // not awaited: an await before it would leave the gesture
+    if (!ctx) { const m = await soundsReady; if (!ctx) startAudio(m); } // Run before the module loaded: the unlock below resumes it
+    print('> ' + src.trim(), 'in');
+    sapf.ccall('sapf_eval', null, ['string'], [src + '\n']);
+  }
 
-// A context started or resumed outside a gesture stays suspended on iOS (and goes 'interrupted' after
-// a call or the app being backgrounded); any later tap or key press starts it.
-for (const t of ['touchend', 'click', 'keydown'])
-  addEventListener(t, () => ctx && ctx.state !== 'running' && ctx.resume(), true);
+  // A context started or resumed outside a gesture stays suspended on iOS (and goes 'interrupted' after
+  // a call or the app being backgrounded); any later tap or key press starts it.
+  for (const t of ['touchend', 'click', 'keydown'])
+    addEventListener(t, () => ctx && ctx.state !== 'running' && ctx.resume(), true);
 
-// Evaluating code that plays stops the current sound first, when "Solo" is on.
-const replace = document.getElementById('replace');
-replace.title = replace.parentNode.title; // the label's tooltip, as the checkbox's description for screen readers too
-const evalCode = src => {
-  // Clearing the stack (Mod+Shift+.) clears the sliders too; a slider that runs again
-  // gets a fresh row, at the position sapf kept for its name.
-  if (src.trim() === 'clear') { controls.replaceChildren(); rows.length = 0; }
-  return run(replace.checked && playsSound(src) ? 'stop\n' + src : src);
-};
-// The editor's code and the split size persist in this browser. Storage can be blocked (private mode,
-// site data off): then the page just starts fresh each time.
-const store = {
-  get: k => { try { return localStorage.getItem('sapf-web:' + k); } catch { return null; } },
-  set: (k, v) => { try { localStorage.setItem('sapf-web:' + k, v); return true; } catch { return false; } },
-  del: k => { try { localStorage.removeItem('sapf-web:' + k); } catch {} },
-  keys: prefix => { try { return Object.keys(localStorage).filter(k => k.startsWith('sapf-web:' + prefix)).map(k => k.slice(9 + prefix.length)); } catch { return []; } },
-};
+  // Evaluating code that plays stops the current sound first, when "Solo" is on.
+  const replace = document.getElementById('replace');
+  replace.title = replace.parentNode.title; // the label's tooltip, as the checkbox's description for screen readers too
+  const evalCode = src => {
+    // Clearing the stack (Mod+Shift+.) clears the sliders too; a slider that runs again
+    // gets a fresh row, at the position sapf kept for its name.
+    if (src.trim() === 'clear') { controls.replaceChildren(); rows.length = 0; }
+    return run(replace.checked && playsSound(src) ? 'stop\n' + src : src);
+  };
+  // The editor's code and the split size persist in this browser. Storage can be blocked (private mode,
+  // site data off): then the page just starts fresh each time.
+  const store = {
+    get: k => { try { return localStorage.getItem('sapf-web:' + k); } catch { return null; } },
+    set: (k, v) => { try { localStorage.setItem('sapf-web:' + k, v); return true; } catch { return false; } },
+    del: k => { try { localStorage.removeItem('sapf-web:' + k); } catch { } },
+    keys: prefix => { try { return Object.keys(localStorage).filter(k => k.startsWith('sapf-web:' + prefix)).map(k => k.slice(9 + prefix.length)); } catch { return []; } },
+  };
 
-// Files: named texts in browser storage ('file:<name>'), saved on every edit. Otherwise the editor holds a
-// scratch text (the welcome text, New, an example) kept only in 'code'; leaving it once edited asks first.
-let buf; // { file } or { title, dirty }
-// My prelude is the saved file of this name, shown in its own place in the File menu, not under saved.
-const PRELUDE = 'prelude';
-const preludeIntro = `; My prelude: your own library of words.
+  // Files: named texts in browser storage ('file:<name>'), saved on every edit. Otherwise the editor holds a
+  // scratch text (the welcome text, New, an example) kept only in 'code'; leaving it once edited asks first.
+  let buf; // { file } or { title, dirty }
+  // My prelude is the saved file of this name, shown in its own place in the File menu, not under saved.
+  const PRELUDE = 'prelude';
+  const preludeIntro = `; My prelude: your own library of words.
 ;
 ; This file is special. It loads every time the page starts, right after the built-in prelude
 ; (File > built-in prelude), so whatever you define here is always there. A word with the
@@ -755,446 +1512,446 @@ const preludeIntro = `; My prelude: your own library of words.
 ; Define a word: arguments, then the body in brackets, then = and the name, e.g.
 ; \\freq [freq 0 sinosc .2 *] = beep
 `;
-try { buf = JSON.parse(store.get('buf')); } catch {}
-const welcome = document.getElementById('example').textContent;
-buf ??= { title: 'untitled', dirty: (store.get('code') ?? welcome) !== welcome }; // text from before files existed
-if (buf.file && store.get('file:' + buf.file) === null) buf = { title: buf.file, dirty: true }; // deleted elsewhere
-const fileLabel = document.getElementById('fileLabel');
-const showBuf = () => {
-  fileLabel.textContent = '· ' + (buf.file === PRELUDE ? 'my prelude (loads at startup)' : buf.file ?? buf.title + (buf.dirty ? ' (unsaved)' : ''));
-  store.set('buf', JSON.stringify(buf));
-};
-let warned = false;
-const editor = createEditor(document.getElementById('code'),
-  store.get('code') ?? welcome, evalCode, text => {
-    if (!store.set('code', text) && !warned) { warned = true; print('Browser storage is full or blocked: edits are not saved.', 'err'); }
-    if (buf.file) store.set('file:' + buf.file, text);
-    else if (!buf.dirty) { buf.dirty = true; showBuf(); }
-  });
-showBuf();
-editor.focus();
+  try { buf = JSON.parse(store.get('buf')); } catch { }
+  const welcome = document.getElementById('example').textContent;
+  buf ??= { title: 'untitled', dirty: (store.get('code') ?? welcome) !== welcome }; // text from before files existed
+  if (buf.file && store.get('file:' + buf.file) === null) buf = { title: buf.file, dirty: true }; // deleted elsewhere
+  const fileLabel = document.getElementById('fileLabel');
+  const showBuf = () => {
+    fileLabel.textContent = '· ' + (buf.file === PRELUDE ? 'my prelude (loads at startup)' : buf.file ?? buf.title + (buf.dirty ? ' (unsaved)' : ''));
+    store.set('buf', JSON.stringify(buf));
+  };
+  let warned = false;
+  const editor = createEditor(document.getElementById('code'),
+    store.get('code') ?? welcome, evalCode, text => {
+      if (!store.set('code', text) && !warned) { warned = true; print('Browser storage is full or blocked: edits are not saved.', 'err'); }
+      if (buf.file) store.set('file:' + buf.file, text);
+      else if (!buf.dirty) { buf.dirty = true; showBuf(); }
+    });
+  showBuf();
+  editor.focus();
 
-const fileMenu = document.getElementById('fileMenu'), fileName = document.getElementById('fileName');
-// Focus moves only with a fine pointer: on touch screens it pops the keyboard over what was just opened.
-const finePointer = matchMedia('(pointer: fine)'), focusIfFine = el => finePointer.matches && el.focus();
-const closeMenu = () => { fileMenu.open = false; focusIfFine(editor); };
-function openText(text, next) {
-  if (buf.dirty && !confirm(`Discard the unsaved changes to "${buf.title}"?`)) return;
-  buf = next;
-  editor.setDoc(text);
-  store.set('code', text);
-  showBuf();
-  closeMenu();
-}
-function save() {
-  const name = fileName.value.trim(), text = editor.state.doc.toString();
-  if (!name) return fileName.focus();
-  if (name !== buf.file && store.get('file:' + name) !== null &&
-    !confirm(name === PRELUDE ? 'Replace my prelude, which loads at startup?' : `Replace the saved "${name}"?`)) return;
-  if (!store.set('file:' + name, text)) return print(`Could not save "${name}": browser storage is full or blocked.`, 'err');
-  buf = { file: name };
-  showBuf();
-  closeMenu();
-}
-document.getElementById('save').onclick = save;
-fileName.onkeydown = e => e.key === 'Enter' && save();
-document.getElementById('export').onclick = () => {
-  const name = (fileName.value.trim() || buf.file || buf.title).replace(/\.sapf$/i, '') + '.sapf';
-  if (downloadUrl) URL.revokeObjectURL(downloadUrl); // same one-live-blob rule as download()
-  const a = document.createElement('a');
-  a.href = downloadUrl = URL.createObjectURL(new Blob([editor.state.doc.toString()], { type: 'text/plain' }));
-  a.download = name;
-  a.click();
-  closeMenu();
-};
-document.getElementById('new').onclick = () => openText('', { title: 'untitled', dirty: false });
-for (const b of fileMenu.querySelectorAll('[data-example]')) b.onclick = async () => {
-  const r = await fetch('build/' + b.dataset.example);
-  if (!r.ok) return print(`Could not load ${b.dataset.example} (${r.status})`, 'err');
-  openText(await r.text(), { title: b.textContent, dirty: false });
-};
-function openPrelude() {
-  if (store.get('file:' + PRELUDE) === null && !store.set('file:' + PRELUDE, preludeIntro))
-    return print('Could not create my prelude: browser storage is full or blocked.', 'err');
-  openText(store.get('file:' + PRELUDE), { file: PRELUDE });
-}
-document.getElementById('myPrelude').onclick = openPrelude;
-document.getElementById('builtinPrelude').onclick = async () =>
-  openText((await soundsReady).FS.readFile('/sapf-prelude.txt', { encoding: 'utf8' }), { title: 'built-in prelude (view only; edit my prelude)', dirty: false });
-// The saved list is rebuilt each time the menu opens.
-fileMenu.ontoggle = () => {
-  if (!fileMenu.open) return;
-  fileName.value = buf.file === PRELUDE ? '' : buf.file ?? '';
-  document.getElementById('myPrelude').classList.toggle('cur', buf.file === PRELUDE);
-  const list = document.getElementById('fileList'), names = store.keys('file:').filter(n => n !== PRELUDE).sort();
-  list.replaceChildren();
-  if (!names.length) list.innerHTML = '<div class="none">nothing saved yet</div>';
-  for (const name of names) {
-    const row = document.createElement('div');
-    row.className = 'file';
-    row.innerHTML = '<button class="item"></button><button class="del">×</button>';
-    const [open, del] = row.children;
-    open.textContent = name;
-    open.classList.toggle('cur', name === buf.file);
-    open.onclick = () => openText(store.get('file:' + name) ?? '', { file: name });
-    del.title = `Delete "${name}"`;
-    del.setAttribute('aria-label', del.title);
-    del.onclick = () => {
-      if (!confirm(`Delete "${name}"?`)) return;
-      store.del('file:' + name);
-      if (name === buf.file) { buf = { title: name, dirty: true }; showBuf(); } // its text stays in the editor, unsaved
-      row.remove();
-    };
-    list.append(row);
+  const fileMenu = document.getElementById('fileMenu'), fileName = document.getElementById('fileName');
+  // Focus moves only with a fine pointer: on touch screens it pops the keyboard over what was just opened.
+  const finePointer = matchMedia('(pointer: fine)'), focusIfFine = el => finePointer.matches && el.focus();
+  const closeMenu = () => { fileMenu.open = false; focusIfFine(editor); };
+  function openText(text, next) {
+    if (buf.dirty && !confirm(`Discard the unsaved changes to "${buf.title}"?`)) return;
+    buf = next;
+    editor.setDoc(text);
+    store.set('code', text);
+    showBuf();
+    closeMenu();
   }
-  fitPop(fileMenu);
-  focusIfFine(fileName);
-};
-const soundMenu = document.getElementById('soundMenu'), soundFile = document.getElementById('soundFile');
-async function listSounds() {
-  stopPreview();
-  await soundsReady;
-  const list = document.getElementById('soundList');
-  list.replaceChildren();
-  for (const name of [...new Set([...builtinSounds, ...userSounds])].sort()) {
-    const row = document.createElement('div');
-    row.className = 'file';
-    row.innerHTML = '<button class="del play" aria-pressed="false">▶&#xFE0E;</button><button class="item"></button><span class="ch"></span>' +
-      (userSounds.has(name) ? '<button class="del">×</button>' : '<span class="del gap" aria-hidden="true">×</span>');
-    const [play, insert, ch, x] = row.children, n = soundChannels.get(name), del = userSounds.has(name) && x;
-    insert.textContent = name;
-    ch.textContent = n === 1 ? 'mono' : n === 2 ? 'stereo' : n ? n + ' ch' : '';
-    insert.title = [userSounds.has(name) ? 'uploaded' : 'built-in', ch.textContent].filter(Boolean).join(', ');
-    play.title = `Preview "${name}"`;
-    play.setAttribute('aria-label', play.title);
-    play.onclick = () => preview(name, play);
-    insert.onclick = () => {
-      soundMenu.open = false;
-      editor.dispatch(editor.state.replaceSelection(`"${name}" sf> `));
-      focusIfFine(editor);
-    };
-    if (del) {
+  function save() {
+    const name = fileName.value.trim(), text = editor.state.doc.toString();
+    if (!name) return fileName.focus();
+    if (name !== buf.file && store.get('file:' + name) !== null &&
+      !confirm(name === PRELUDE ? 'Replace my prelude, which loads at startup?' : `Replace the saved "${name}"?`)) return;
+    if (!store.set('file:' + name, text)) return print(`Could not save "${name}": browser storage is full or blocked.`, 'err');
+    buf = { file: name };
+    showBuf();
+    closeMenu();
+  }
+  document.getElementById('save').onclick = save;
+  fileName.onkeydown = e => e.key === 'Enter' && save();
+  document.getElementById('export').onclick = () => {
+    const name = (fileName.value.trim() || buf.file || buf.title).replace(/\.sapf$/i, '') + '.sapf';
+    if (downloadUrl) URL.revokeObjectURL(downloadUrl); // same one-live-blob rule as download()
+    const a = document.createElement('a');
+    a.href = downloadUrl = URL.createObjectURL(new Blob([editor.state.doc.toString()], { type: 'text/plain' }));
+    a.download = name;
+    a.click();
+    closeMenu();
+  };
+  document.getElementById('new').onclick = () => openText('', { title: 'untitled', dirty: false });
+  for (const b of fileMenu.querySelectorAll('[data-example]')) b.onclick = async () => {
+    const r = await fetch('build/' + b.dataset.example);
+    if (!r.ok) return print(`Could not load ${b.dataset.example} (${r.status})`, 'err');
+    openText(await r.text(), { title: b.textContent, dirty: false });
+  };
+  function openPrelude() {
+    if (store.get('file:' + PRELUDE) === null && !store.set('file:' + PRELUDE, preludeIntro))
+      return print('Could not create my prelude: browser storage is full or blocked.', 'err');
+    openText(store.get('file:' + PRELUDE), { file: PRELUDE });
+  }
+  document.getElementById('myPrelude').onclick = openPrelude;
+  document.getElementById('builtinPrelude').onclick = async () =>
+    openText((await soundsReady).FS.readFile('/sapf-prelude.txt', { encoding: 'utf8' }), { title: 'built-in prelude (view only; edit my prelude)', dirty: false });
+  // The saved list is rebuilt each time the menu opens.
+  fileMenu.ontoggle = () => {
+    if (!fileMenu.open) return;
+    fileName.value = buf.file === PRELUDE ? '' : buf.file ?? '';
+    document.getElementById('myPrelude').classList.toggle('cur', buf.file === PRELUDE);
+    const list = document.getElementById('fileList'), names = store.keys('file:').filter(n => n !== PRELUDE).sort();
+    list.replaceChildren();
+    if (!names.length) list.innerHTML = '<div class="none">nothing saved yet</div>';
+    for (const name of names) {
+      const row = document.createElement('div');
+      row.className = 'file';
+      row.innerHTML = '<button class="item"></button><button class="del">×</button>';
+      const [open, del] = row.children;
+      open.textContent = name;
+      open.classList.toggle('cur', name === buf.file);
+      open.onclick = () => openText(store.get('file:' + name) ?? '', { file: name });
       del.title = `Delete "${name}"`;
       del.setAttribute('aria-label', del.title);
-      del.onclick = async () => confirm(`Delete the sound "${name}"?`) && (await deleteSound(name), listSounds());
+      del.onclick = () => {
+        if (!confirm(`Delete "${name}"?`)) return;
+        store.del('file:' + name);
+        if (name === buf.file) { buf = { title: name, dirty: true }; showBuf(); } // its text stays in the editor, unsaved
+        row.remove();
+      };
+      list.append(row);
     }
-    list.append(row);
+    fitPop(fileMenu);
+    focusIfFine(fileName);
+  };
+  const soundMenu = document.getElementById('soundMenu'), soundFile = document.getElementById('soundFile');
+  async function listSounds() {
+    stopPreview();
+    await soundsReady;
+    const list = document.getElementById('soundList');
+    list.replaceChildren();
+    for (const name of [...new Set([...builtinSounds, ...userSounds])].sort()) {
+      const row = document.createElement('div');
+      row.className = 'file';
+      row.innerHTML = '<button class="del play" aria-pressed="false">▶&#xFE0E;</button><button class="item"></button><span class="ch"></span>' +
+        (userSounds.has(name) ? '<button class="del">×</button>' : '<span class="del gap" aria-hidden="true">×</span>');
+      const [play, insert, ch, x] = row.children, n = soundChannels.get(name), del = userSounds.has(name) && x;
+      insert.textContent = name;
+      ch.textContent = n === 1 ? 'mono' : n === 2 ? 'stereo' : n ? n + ' ch' : '';
+      insert.title = [userSounds.has(name) ? 'uploaded' : 'built-in', ch.textContent].filter(Boolean).join(', ');
+      play.title = `Preview "${name}"`;
+      play.setAttribute('aria-label', play.title);
+      play.onclick = () => preview(name, play);
+      insert.onclick = () => {
+        soundMenu.open = false;
+        editor.dispatch(editor.state.replaceSelection(`"${name}" sf> `));
+        focusIfFine(editor);
+      };
+      if (del) {
+        del.title = `Delete "${name}"`;
+        del.setAttribute('aria-label', del.title);
+        del.onclick = async () => confirm(`Delete the sound "${name}"?`) && (await deleteSound(name), listSounds());
+      }
+      list.append(row);
+    }
+    if (!list.children.length) list.innerHTML = '<div class="none">no sounds yet</div>';
   }
-  if (!list.children.length) list.innerHTML = '<div class="none">no sounds yet</div>';
-}
-// Preview a sound through its own AudioContext, apart from sapf's: Stop and Solo leave it alone.
-// Clicking ▶ again (or another sound's) stops the one playing, and so does closing or rebuilding
-// the list, which takes its ■ away. previewing is set before the decode, so a click while a long
-// file decodes stops it rather than starting a second one.
-let previewCtx, previewing;
-// FE0E: text style, or iOS draws ▶ as an emoji
-const showPlaying = (btn, on) => { btn.classList.toggle('on', on); btn.textContent = on ? '■' : '▶\uFE0E'; btn.setAttribute('aria-pressed', on); };
-function stopPreview() {
-  if (!previewing) return;
-  const { src, btn } = previewing;
-  previewing = null;
-  if (src) { src.onended = null; src.stop(); }
-  showPlaying(btn, false);
-}
-async function preview(name, btn) {
-  const was = previewing?.btn;
-  stopPreview();
-  if (was === btn) return;
-  previewCtx ??= new AudioContext(); // inside the click, so the browser lets it start
-  const me = previewing = { btn };
-  showPlaying(btn, true);
-  let buf;
-  try { buf = await previewCtx.decodeAudioData((await soundsReady).FS.readFile(`${SOUNDS}/${name}`).slice().buffer); }
-  catch {
-    if (previewing === me) stopPreview();
-    return print(`This browser cannot play ${name} for a preview; sapf can still read it.`, 'err');
+  // Preview a sound through its own AudioContext, apart from sapf's: Stop and Solo leave it alone.
+  // Clicking ▶ again (or another sound's) stops the one playing, and so does closing or rebuilding
+  // the list, which takes its ■ away. previewing is set before the decode, so a click while a long
+  // file decodes stops it rather than starting a second one.
+  let previewCtx, previewing;
+  // FE0E: text style, or iOS draws ▶ as an emoji
+  const showPlaying = (btn, on) => { btn.classList.toggle('on', on); btn.textContent = on ? '■' : '▶\uFE0E'; btn.setAttribute('aria-pressed', on); };
+  function stopPreview() {
+    if (!previewing) return;
+    const { src, btn } = previewing;
+    previewing = null;
+    if (src) { src.onended = null; src.stop(); }
+    showPlaying(btn, false);
   }
-  if (previewing !== me) return; // stopped while decoding
-  const src = me.src = previewCtx.createBufferSource();
-  src.buffer = buf;
-  src.connect(previewCtx.destination);
-  src.onended = () => { previewing = null; showPlaying(btn, false); };
-  src.start();
-}
-// A menu's popup stays 16px inside the window: on phones the Sounds one would run off the right edge.
-function fitPop(menu) {
-  const pop = menu.querySelector('.pop');
-  pop.style.left = '';
-  // clientWidth, not innerWidth: phones widen innerWidth to take in content that overflows, this popup too
-  const r = pop.getBoundingClientRect(), w = document.documentElement.clientWidth, left = Math.max(16, Math.min(r.left, w - 16 - r.width));
-  pop.style.left = left - menu.getBoundingClientRect().left + 'px';
-}
-soundMenu.ontoggle = () => soundMenu.open ? (fitPop(soundMenu), listSounds()) : stopPreview();
-document.getElementById('upload').onclick = () => soundFile.click();
-soundFile.onchange = async () => { await addSounds([...soundFile.files]); soundFile.value = ''; listSounds(); };
-// Audio files dropped anywhere join the sounds. Capture phase, so the editor does not paste them as
-// text; other dropped files go on to it as before.
-const isAudio = f => f.type.startsWith('audio/') || SNDFILE.test(f.name) || /\.(mp3|ogg|oga|opus|flac|m4a|aac|webm)$/i.test(f.name);
-addEventListener('dragover', e => { if (e.dataTransfer.types.includes('Files')) e.preventDefault(); }, true);
-addEventListener('drop', async e => {
-  const files = [...e.dataTransfer.files].filter(isAudio);
-  if (!files.length) return;
-  e.preventDefault(); e.stopPropagation();
-  await addSounds(files);
-  if (soundMenu.open) listSounds();
-}, true);
-document.addEventListener('click', e => {
-  for (const menu of [fileMenu, soundMenu]) if (menu.open && !menu.contains(e.target)) menu.open = false;
-});
-// Esc means a keyboard, so the editor gets focus back even on touch screens.
-fileMenu.onkeydown = e => { if (e.key === 'Escape') { fileMenu.open = false; editor.focus(); } };
-soundMenu.onkeydown = e => { if (e.key === 'Escape') { soundMenu.open = false; editor.focus(); } };
-const picks = { line: lineAt, block: blockAt, paragraph: paragraphAt };
-for (const b of document.querySelectorAll('#runs button')) {
-  b.onmousedown = e => e.preventDefault(); // keep the editor's focus, and on phones its keyboard state
-  b.onclick = () => editor.evalWith(picks[b.dataset.run]);
-}
-document.getElementById('stop').onclick = () => run('stop');
-const clearLog = () => log.replaceChildren();
-document.getElementById('clearLog').onclick = clearLog;
-// Mod+K clears the console from anywhere on the page. Mod is Cmd on a Mac, where Ctrl+K stays the
-// editor's delete-to-line-end.
-const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
-document.addEventListener('keydown', e => {
-  if (e.code === 'KeyK' && (isMac ? e.metaKey : e.ctrlKey) && !e.shiftKey && !e.altKey) { e.preventDefault(); clearLog(); }
-});
-// Layout: a tree of splits, each leaf a panel ('editor', 'console', 'scope', 'fall'), each split
-// { dir: 'row' | 'col', f: the first half's share, a, b }. Drag a panel's title strip onto another
-// panel: near an edge splits that panel there, in the middle swaps the two. Kept in the browser.
-// Panels are moved, never rebuilt, so the editor, console and canvases keep their state.
-const main = document.querySelector('main'), drop = document.getElementById('drop');
-const panels = Object.fromEntries([...main.children].map(p => [p.dataset.panel, p]));
-// Narrow screens get a fixed stack (console, editor, then scope beside spectrum) with its own
-// resizable shares; panels move only on wide ones. The console is on top so the on-screen keyboard,
-// which covers the bottom while typing, never hides the output.
-const stacked = matchMedia('(max-width: 760px)');
-const WIDE = { dir: 'row', f: .5, a: { dir: 'row', f: .6, a: 'editor', b: 'help' }, b: { dir: 'col', f: .72, a: 'console', b: { dir: 'row', f: .5, a: 'scope', b: 'fall' } } };
-const NARROW = { dir: 'col', f: .3, a: { dir: 'col', f: .5, a: 'console', b: 'help' }, b: { dir: 'col', f: .7, a: 'editor', b: { dir: 'row', f: .5, a: 'scope', b: 'fall' } } };
-const leaves = n => typeof n === 'string' ? [n] : [...leaves(n.a), ...leaves(n.b)];
-function loadLayout(key, fallback) {
-  try {
-    let n = JSON.parse(store.get(key));
-    if (!leaves(n).includes('help')) n = { dir: fallback === WIDE ? 'row' : 'col', f: .7, a: n, b: 'help' }; // saved before the help panel existed
-    if (leaves(n).sort().join() === Object.keys(panels).sort().join()) return n;
-  } catch {} // missing or malformed
-  return structuredClone(fallback);
-}
-let layout = loadLayout('layout', WIDE);
-const narrow = loadLayout('layoutNarrow2', NARROW);
-const tree = () => stacked.matches ? narrow : layout;
-// Both trees: a drag that outlives a switch between them (the window crossing 760px) still saves the one it changed.
-const saveLayout = () => { store.set('layout', JSON.stringify(layout)); store.set('layoutNarrow2', JSON.stringify(narrow)); };
-['split', 'scopeH', 'layoutNarrow'].forEach(store.del); // old settings: fixed splitters, the editor-first phone stack
-const shown = n => typeof n === 'string' ? !panels[n].hidden : shown(n.a) || shown(n.b);
-const MIN = 72, BAR = 1; // px a panel keeps (its title strip and some screen); a splitter's thickness (.tile's 1px)
-// The px a subtree needs along a split's axis: panels in line add up with their splitters, panels across take the most.
-const need = (n, vert) => typeof n === 'string' ? (panels[n].hidden ? 0 : MIN) :
-  !shown(n.a) ? need(n.b, vert) : !shown(n.b) ? need(n.a, vert) :
-  (n.dir === 'col') === vert ? need(n.a, vert) + BAR + need(n.b, vert) : Math.max(need(n.a, vert), need(n.b, vert));
-// Each tile shows its share clamped to what fits its size now, so a share saved in a bigger window (or
-// a smaller one) never squeezes a panel under its title strip; the share itself is kept as dragged.
-const fitTiles = new ResizeObserver(es => es.forEach(e => e.target.show()));
-// A split with one half hidden (the scope or spectrum toggled off) shows only the other half.
-function build(n) {
-  if (typeof n === 'string') return panels[n];
-  if (!shown(n.a)) return build(n.b);
-  if (!shown(n.b)) return build(n.a);
-  const vert = n.dir === 'col', el = document.createElement('div'), bar = document.createElement('div');
-  el.className = 'tile ' + (vert ? 'col' : 'row');
-  bar.className = 'split' + (vert ? ' row' : '');
-  bar.role = 'separator'; bar.tabIndex = 0; bar.ariaLabel = 'Resize panels';
-  bar.ariaOrientation = vert ? 'horizontal' : 'vertical'; bar.ariaValueMin = 5; bar.ariaValueMax = 95;
-  // [lo, hi]: the shares that leave each side what it needs; with too little room, split in proportion.
-  const bounds = () => {
-    const room = (vert ? el.clientHeight : el.clientWidth) - BAR, a = need(n.a, vert), b = need(n.b, vert);
-    if (room <= 0) return [0, 1]; // not laid out yet
-    return a + b <= room ? [a / room, 1 - b / room] : [a / (a + b), a / (a + b)];
-  };
-  el.show = () => {
-    const [lo, hi] = bounds(), f = el.f = Math.min(hi, Math.max(lo, n.f)); // el.f: the share shown
-    el.style.setProperty('--a', f + 'fr');
-    el.style.setProperty('--b', 1 - f + 'fr');
-    bar.ariaValueNow = Math.round(f * 100);
-  };
-  // Saved shares are kept within .05-.95, and dragging or the arrow keys within what fits now.
-  const setF = f => {
-    const [lo, hi] = bounds();
-    n.f = Math.min(.95, hi, Math.max(.05, lo, f));
-    el.show();
-  };
-  n.f = Math.min(.95, Math.max(.05, +n.f || .5));
-  el.show();
-  fitTiles.observe(el);
-  bar.onpointerdown = e => {
-    if (e.button) return;
-    e.preventDefault(); // no text selection while dragging
-    bar.setPointerCapture(e.pointerId);
-    bar.classList.add('drag');
-    const r = el.getBoundingClientRect(), gap = BAR / 2;
-    bar.onpointermove = e => setF(vert ? (e.clientY - r.top - gap) / (r.height - BAR) : (e.clientX - r.left - gap) / (r.width - BAR));
-  };
-  bar.onlostpointercapture = () => { bar.onpointermove = null; bar.classList.remove('drag'); saveLayout(); };
-  bar.onkeydown = e => {
-    const d = { ArrowLeft: -.05, ArrowUp: -.05, ArrowRight: .05, ArrowDown: .05 }[e.key];
-    if (d) { e.preventDefault(); setF(el.f + d); saveLayout(); } // from the share shown, which may be clamped
-  };
-  el.append(build(n.a), bar, build(n.b));
-  return el;
-}
-// Moving a node out of the page resets its scroll and drops focus; put both back.
-function render() {
-  const scrolls = [editor.scrollDOM, log].map(e => [e, e.scrollTop]), focused = document.activeElement;
-  fitTiles.disconnect();
-  main.replaceChildren(build(tree()));
-  for (const p of Object.values(panels)) p.querySelector('.tag').title = stacked.matches ? '' : 'Drag to move this panel';
-  scrolls.forEach(([e, t]) => e.scrollTop = t);
-  if (focused !== document.activeElement) focused?.focus({ preventScroll: true });
-}
-stacked.onchange = render;
-// The tree without leaf id: its split collapses into the sibling.
-function without(n, id) {
-  if (typeof n === 'string') return n === id ? null : n;
-  const a = without(n.a, id), b = without(n.b, id);
-  return a && b ? { ...n, a, b } : a || b;
-}
-const mapLeaves = (n, f) => typeof n === 'string' ? f(n) : { ...n, a: mapLeaves(n.a, f), b: mapLeaves(n.b, f) };
-function movePanel(id, target, zone) {
-  if (zone === 'swap') layout = mapLeaves(layout, s => s === id ? target : s === target ? id : s);
-  else layout = mapLeaves(without(layout, id), s => s !== target ? s : {
-    dir: zone === 'top' || zone === 'bottom' ? 'col' : 'row', f: .5,
-    a: zone === 'left' || zone === 'top' ? id : target, b: zone === 'left' || zone === 'top' ? target : id,
+  async function preview(name, btn) {
+    const was = previewing?.btn;
+    stopPreview();
+    if (was === btn) return;
+    previewCtx ??= new AudioContext(); // inside the click, so the browser lets it start
+    const me = previewing = { btn };
+    showPlaying(btn, true);
+    let buf;
+    try { buf = await previewCtx.decodeAudioData((await soundsReady).FS.readFile(`${SOUNDS}/${name}`).slice().buffer); }
+    catch {
+      if (previewing === me) stopPreview();
+      return print(`This browser cannot play ${name} for a preview; sapf can still read it.`, 'err');
+    }
+    if (previewing !== me) return; // stopped while decoding
+    const src = me.src = previewCtx.createBufferSource();
+    src.buffer = buf;
+    src.connect(previewCtx.destination);
+    src.onended = () => { previewing = null; showPlaying(btn, false); };
+    src.start();
+  }
+  // A menu's popup stays 16px inside the window: on phones the Sounds one would run off the right edge.
+  function fitPop(menu) {
+    const pop = menu.querySelector('.pop');
+    pop.style.left = '';
+    // clientWidth, not innerWidth: phones widen innerWidth to take in content that overflows, this popup too
+    const r = pop.getBoundingClientRect(), w = document.documentElement.clientWidth, left = Math.max(16, Math.min(r.left, w - 16 - r.width));
+    pop.style.left = left - menu.getBoundingClientRect().left + 'px';
+  }
+  soundMenu.ontoggle = () => soundMenu.open ? (fitPop(soundMenu), listSounds()) : stopPreview();
+  document.getElementById('upload').onclick = () => soundFile.click();
+  soundFile.onchange = async () => { await addSounds([...soundFile.files]); soundFile.value = ''; listSounds(); };
+  // Audio files dropped anywhere join the sounds. Capture phase, so the editor does not paste them as
+  // text; other dropped files go on to it as before.
+  const isAudio = f => f.type.startsWith('audio/') || SNDFILE.test(f.name) || /\.(mp3|ogg|oga|opus|flac|m4a|aac|webm)$/i.test(f.name);
+  addEventListener('dragover', e => { if (e.dataTransfer.types.includes('Files')) e.preventDefault(); }, true);
+  addEventListener('drop', async e => {
+    const files = [...e.dataTransfer.files].filter(isAudio);
+    if (!files.length) return;
+    e.preventDefault(); e.stopPropagation();
+    await addSounds(files);
+    if (soundMenu.open) listSounds();
+  }, true);
+  document.addEventListener('click', e => {
+    for (const menu of [fileMenu, soundMenu]) if (menu.open && !menu.contains(e.target)) menu.open = false;
   });
-  saveLayout();
-  render();
-}
-// Where a drop at (x, y) lands on rect r: the middle third swaps, else the nearest edge's half.
-function dropZone(r, x, y) {
-  const u = (x - r.left) / r.width, v = (y - r.top) / r.height;
-  if (Math.abs(u - .5) < 1 / 6 && Math.abs(v - .5) < 1 / 6) return ['swap', r];
-  const d = { top: v, bottom: 1 - v, left: u, right: 1 - u };
-  const zone = Object.keys(d).reduce((m, k) => d[k] < d[m] ? k : m);
-  const half = { left: [0, 0, .5, 1], right: [.5, 0, .5, 1], top: [0, 0, 1, .5], bottom: [0, .5, 1, .5] }[zone];
-  return [zone, { left: r.left + half[0] * r.width, top: r.top + half[1] * r.height, width: half[2] * r.width, height: half[3] * r.height }];
-}
-for (const [id, p] of Object.entries(panels)) {
-  const tag = p.querySelector('.tag');
-  tag.onpointerdown = e => {
-    if (e.button || e.target.closest('button') || stacked.matches) return;
-    e.preventDefault();
-    tag.setPointerCapture(e.pointerId);
-    const x0 = e.clientX, y0 = e.clientY;
-    let moving = false, target = null, zone;
-    tag.onpointermove = e => {
-      if (!moving && Math.hypot(e.clientX - x0, e.clientY - y0) < 5) return; // a click is not a drag
-      moving = true;
-      p.classList.add('dragging');
-      target = Object.keys(panels).find(k => {
-        if (k === id || panels[k].hidden) return false;
-        const r = panels[k].getBoundingClientRect();
-        return e.clientX >= r.left && e.clientX < r.right && e.clientY >= r.top && e.clientY < r.bottom;
-      });
-      drop.hidden = !target;
-      if (!target) return;
-      let r;
-      [zone, r] = dropZone(panels[target].getBoundingClientRect(), e.clientX, e.clientY);
-      Object.assign(drop.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px' });
+  // Esc means a keyboard, so the editor gets focus back even on touch screens.
+  fileMenu.onkeydown = e => { if (e.key === 'Escape') { fileMenu.open = false; editor.focus(); } };
+  soundMenu.onkeydown = e => { if (e.key === 'Escape') { soundMenu.open = false; editor.focus(); } };
+  const picks = { line: lineAt, block: blockAt, paragraph: paragraphAt };
+  for (const b of document.querySelectorAll('#runs button')) {
+    b.onmousedown = e => e.preventDefault(); // keep the editor's focus, and on phones its keyboard state
+    b.onclick = () => editor.evalWith(picks[b.dataset.run]);
+  }
+  document.getElementById('stop').onclick = () => run('stop');
+  const clearLog = () => log.replaceChildren();
+  document.getElementById('clearLog').onclick = clearLog;
+  // Mod+K clears the console from anywhere on the page. Mod is Cmd on a Mac, where Ctrl+K stays the
+  // editor's delete-to-line-end.
+  const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
+  document.addEventListener('keydown', e => {
+    if (e.code === 'KeyK' && (isMac ? e.metaKey : e.ctrlKey) && !e.shiftKey && !e.altKey) { e.preventDefault(); clearLog(); }
+  });
+  // Layout: a tree of splits, each leaf a panel ('editor', 'console', 'scope', 'fall'), each split
+  // { dir: 'row' | 'col', f: the first half's share, a, b }. Drag a panel's title strip onto another
+  // panel: near an edge splits that panel there, in the middle swaps the two. Kept in the browser.
+  // Panels are moved, never rebuilt, so the editor, console and canvases keep their state.
+  const main = document.querySelector('main'), drop = document.getElementById('drop');
+  const panels = Object.fromEntries([...main.children].map(p => [p.dataset.panel, p]));
+  // Narrow screens get a fixed stack (console, editor, then scope beside spectrum) with its own
+  // resizable shares; panels move only on wide ones. The console is on top so the on-screen keyboard,
+  // which covers the bottom while typing, never hides the output.
+  const stacked = matchMedia('(max-width: 760px)');
+  const WIDE = { dir: 'row', f: .5, a: { dir: 'row', f: .6, a: 'editor', b: 'help' }, b: { dir: 'col', f: .72, a: 'console', b: { dir: 'row', f: .5, a: 'scope', b: 'fall' } } };
+  const NARROW = { dir: 'col', f: .3, a: { dir: 'col', f: .5, a: 'console', b: 'help' }, b: { dir: 'col', f: .7, a: 'editor', b: { dir: 'row', f: .5, a: 'scope', b: 'fall' } } };
+  const leaves = n => typeof n === 'string' ? [n] : [...leaves(n.a), ...leaves(n.b)];
+  function loadLayout(key, fallback) {
+    try {
+      let n = JSON.parse(store.get(key));
+      if (!leaves(n).includes('help')) n = { dir: fallback === WIDE ? 'row' : 'col', f: .7, a: n, b: 'help' }; // saved before the help panel existed
+      if (leaves(n).sort().join() === Object.keys(panels).sort().join()) return n;
+    } catch { } // missing or malformed
+    return structuredClone(fallback);
+  }
+  let layout = loadLayout('layout', WIDE);
+  const narrow = loadLayout('layoutNarrow2', NARROW);
+  const tree = () => stacked.matches ? narrow : layout;
+  // Both trees: a drag that outlives a switch between them (the window crossing 760px) still saves the one it changed.
+  const saveLayout = () => { store.set('layout', JSON.stringify(layout)); store.set('layoutNarrow2', JSON.stringify(narrow)); };
+  ['split', 'scopeH', 'layoutNarrow'].forEach(store.del); // old settings: fixed splitters, the editor-first phone stack
+  const shown = n => typeof n === 'string' ? !panels[n].hidden : shown(n.a) || shown(n.b);
+  const MIN = 72, BAR = 1; // px a panel keeps (its title strip and some screen); a splitter's thickness (.tile's 1px)
+  // The px a subtree needs along a split's axis: panels in line add up with their splitters, panels across take the most.
+  const need = (n, vert) => typeof n === 'string' ? (panels[n].hidden ? 0 : MIN) :
+    !shown(n.a) ? need(n.b, vert) : !shown(n.b) ? need(n.a, vert) :
+      (n.dir === 'col') === vert ? need(n.a, vert) + BAR + need(n.b, vert) : Math.max(need(n.a, vert), need(n.b, vert));
+  // Each tile shows its share clamped to what fits its size now, so a share saved in a bigger window (or
+  // a smaller one) never squeezes a panel under its title strip; the share itself is kept as dragged.
+  const fitTiles = new ResizeObserver(es => es.forEach(e => e.target.show()));
+  // A split with one half hidden (the scope or spectrum toggled off) shows only the other half.
+  function build(n) {
+    if (typeof n === 'string') return panels[n];
+    if (!shown(n.a)) return build(n.b);
+    if (!shown(n.b)) return build(n.a);
+    const vert = n.dir === 'col', el = document.createElement('div'), bar = document.createElement('div');
+    el.className = 'tile ' + (vert ? 'col' : 'row');
+    bar.className = 'split' + (vert ? ' row' : '');
+    bar.role = 'separator'; bar.tabIndex = 0; bar.ariaLabel = 'Resize panels';
+    bar.ariaOrientation = vert ? 'horizontal' : 'vertical'; bar.ariaValueMin = 5; bar.ariaValueMax = 95;
+    // [lo, hi]: the shares that leave each side what it needs; with too little room, split in proportion.
+    const bounds = () => {
+      const room = (vert ? el.clientHeight : el.clientWidth) - BAR, a = need(n.a, vert), b = need(n.b, vert);
+      if (room <= 0) return [0, 1]; // not laid out yet
+      return a + b <= room ? [a / room, 1 - b / room] : [a / (a + b), a / (a + b)];
     };
-    tag.onlostpointercapture = () => {
-      tag.onpointermove = null;
-      p.classList.remove('dragging');
-      drop.hidden = true;
-      if (target) movePanel(id, target, zone);
+    el.show = () => {
+      const [lo, hi] = bounds(), f = el.f = Math.min(hi, Math.max(lo, n.f)); // el.f: the share shown
+      el.style.setProperty('--a', f + 'fr');
+      el.style.setProperty('--b', 1 - f + 'fr');
+      bar.ariaValueNow = Math.round(f * 100);
     };
+    // Saved shares are kept within .05-.95, and dragging or the arrow keys within what fits now.
+    const setF = f => {
+      const [lo, hi] = bounds();
+      n.f = Math.min(.95, hi, Math.max(.05, lo, f));
+      el.show();
+    };
+    n.f = Math.min(.95, Math.max(.05, +n.f || .5));
+    el.show();
+    fitTiles.observe(el);
+    bar.onpointerdown = e => {
+      if (e.button) return;
+      e.preventDefault(); // no text selection while dragging
+      bar.setPointerCapture(e.pointerId);
+      bar.classList.add('drag');
+      const r = el.getBoundingClientRect(), gap = BAR / 2;
+      bar.onpointermove = e => setF(vert ? (e.clientY - r.top - gap) / (r.height - BAR) : (e.clientX - r.left - gap) / (r.width - BAR));
+    };
+    bar.onlostpointercapture = () => { bar.onpointermove = null; bar.classList.remove('drag'); saveLayout(); };
+    bar.onkeydown = e => {
+      const d = { ArrowLeft: -.05, ArrowUp: -.05, ArrowRight: .05, ArrowDown: .05 }[e.key];
+      if (d) { e.preventDefault(); setF(el.f + d); saveLayout(); } // from the share shown, which may be clamped
+    };
+    el.append(build(n.a), bar, build(n.b));
+    return el;
+  }
+  // Moving a node out of the page resets its scroll and drops focus; put both back.
+  function render() {
+    const scrolls = [editor.scrollDOM, log].map(e => [e, e.scrollTop]), focused = document.activeElement;
+    fitTiles.disconnect();
+    main.replaceChildren(build(tree()));
+    for (const p of Object.values(panels)) p.querySelector('.tag').title = stacked.matches ? '' : 'Drag to move this panel';
+    scrolls.forEach(([e, t]) => e.scrollTop = t);
+    if (focused !== document.activeElement) focused?.focus({ preventScroll: true });
+  }
+  stacked.onchange = render;
+  // The tree without leaf id: its split collapses into the sibling.
+  function without(n, id) {
+    if (typeof n === 'string') return n === id ? null : n;
+    const a = without(n.a, id), b = without(n.b, id);
+    return a && b ? { ...n, a, b } : a || b;
+  }
+  const mapLeaves = (n, f) => typeof n === 'string' ? f(n) : { ...n, a: mapLeaves(n.a, f), b: mapLeaves(n.b, f) };
+  function movePanel(id, target, zone) {
+    if (zone === 'swap') layout = mapLeaves(layout, s => s === id ? target : s === target ? id : s);
+    else layout = mapLeaves(without(layout, id), s => s !== target ? s : {
+      dir: zone === 'top' || zone === 'bottom' ? 'col' : 'row', f: .5,
+      a: zone === 'left' || zone === 'top' ? id : target, b: zone === 'left' || zone === 'top' ? target : id,
+    });
+    saveLayout();
+    render();
+  }
+  // Where a drop at (x, y) lands on rect r: the middle third swaps, else the nearest edge's half.
+  function dropZone(r, x, y) {
+    const u = (x - r.left) / r.width, v = (y - r.top) / r.height;
+    if (Math.abs(u - .5) < 1 / 6 && Math.abs(v - .5) < 1 / 6) return ['swap', r];
+    const d = { top: v, bottom: 1 - v, left: u, right: 1 - u };
+    const zone = Object.keys(d).reduce((m, k) => d[k] < d[m] ? k : m);
+    const half = { left: [0, 0, .5, 1], right: [.5, 0, .5, 1], top: [0, 0, 1, .5], bottom: [0, .5, 1, .5] }[zone];
+    return [zone, { left: r.left + half[0] * r.width, top: r.top + half[1] * r.height, width: half[2] * r.width, height: half[3] * r.height }];
+  }
+  for (const [id, p] of Object.entries(panels)) {
+    const tag = p.querySelector('.tag');
+    tag.onpointerdown = e => {
+      if (e.button || e.target.closest('button') || stacked.matches) return;
+      e.preventDefault();
+      tag.setPointerCapture(e.pointerId);
+      const x0 = e.clientX, y0 = e.clientY;
+      let moving = false, target = null, zone;
+      tag.onpointermove = e => {
+        if (!moving && Math.hypot(e.clientX - x0, e.clientY - y0) < 5) return; // a click is not a drag
+        moving = true;
+        p.classList.add('dragging');
+        target = Object.keys(panels).find(k => {
+          if (k === id || panels[k].hidden) return false;
+          const r = panels[k].getBoundingClientRect();
+          return e.clientX >= r.left && e.clientX < r.right && e.clientY >= r.top && e.clientY < r.bottom;
+        });
+        drop.hidden = !target;
+        if (!target) return;
+        let r;
+        [zone, r] = dropZone(panels[target].getBoundingClientRect(), e.clientX, e.clientY);
+        Object.assign(drop.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px' });
+      };
+      tag.onlostpointercapture = () => {
+        tag.onpointermove = null;
+        p.classList.remove('dragging');
+        drop.hidden = true;
+        if (target) movePanel(id, target, zone);
+      };
+    };
+  }
+  // Header buttons show or hide the console, help, scope and spectrum; a hidden panel keeps its place in the layout.
+  const vizPanels = { showConsole: panels.console, showHelp: panels.help, showScope: panels.scope, showFall: panels.fall };
+  const setViz = (id, on) => {
+    vizPanels[id].hidden = !on;
+    document.getElementById(id).setAttribute('aria-pressed', on);
+    store.set(id, on ? 1 : 0);
+    render();
+    wire();
   };
-}
-// Header buttons show or hide the console, help, scope and spectrum; a hidden panel keeps its place in the layout.
-const vizPanels = { showConsole: panels.console, showHelp: panels.help, showScope: panels.scope, showFall: panels.fall };
-const setViz = (id, on) => {
-  vizPanels[id].hidden = !on;
-  document.getElementById(id).setAttribute('aria-pressed', on);
-  store.set(id, on ? 1 : 0);
-  render();
-  wire();
-};
-for (const id in vizPanels) {
-  setViz(id, (store.get(id) ?? (id === 'showHelp' ? '0' : '1')) !== '0'); // help starts hidden
-  document.getElementById(id).onclick = () => setViz(id, vizPanels[id].hidden);
-}
+  for (const id in vizPanels) {
+    setViz(id, (store.get(id) ?? (id === 'showHelp' ? '0' : '1')) !== '0'); // help starts hidden
+    document.getElementById(id).onclick = () => setViz(id, vizPanels[id].hidden);
+  }
 
-// The help panel: every word with its docs, by category, as `helpall` prints them (build/sapf-docs.json).
-const help = panels.help.querySelector('#help'); // out of the page while hidden
-for (let i = 0, d; d = docs[i]; i++) {
-  if (d.category !== docs[i - 1]?.category) help.append(Object.assign(document.createElement('h3'), { textContent: d.category }));
-  const e = document.createElement('div'), sig = document.createElement('code');
-  sig.textContent = [d.name, d.special && '@' + d.special, d.sig].filter(Boolean).join(' ');
-  e.append(sig, document.createElement('br'), d.desc);
-  help.append(e);
-}
+  // The help panel: every word with its docs, by category, as `helpall` prints them (build/sapf-docs.json).
+  const help = panels.help.querySelector('#help'); // out of the page while hidden
+  for (let i = 0, d; d = docs[i]; i++) {
+    if (d.category !== docs[i - 1]?.category) help.append(Object.assign(document.createElement('h3'), { textContent: d.category }));
+    const e = document.createElement('div'), sig = document.createElement('code');
+    sig.textContent = [d.name, d.special && '@' + d.special, d.sig].filter(Boolean).join(' ');
+    e.append(sig, document.createElement('br'), d.desc);
+    help.append(e);
+  }
 
-// Panel settings: the cog in a title strip shows or hides the strip of settings above its screen.
-for (const p of Object.values(panels)) {
-  const cog = p.querySelector('.cog'), box = p.querySelector('.settings');
-  cog.onclick = () => { box.hidden = !box.hidden; cog.setAttribute('aria-expanded', !box.hidden); };
-}
-// A slider row in a settings strip: position 0..1 maps to a value by `to` and back by `from`.
-function knob(box, name, get, set, [to, from], show) {
-  const row = document.createElement('label');
-  row.innerHTML = '<span></span><input type="range" min="0" max="1" step="any"><output></output>';
-  const [label, input, out] = row.children;
-  label.textContent = name;
-  const sync = () => { input.value = from(get()); out.textContent = show(get()); };
-  input.oninput = () => { set(to(+input.value)); sync(); };
-  sync();
-  box.append(row);
-}
-const lin = ([lo, hi]) => [p => lo + p * (hi - lo), v => (v - lo) / (hi - lo)];
-const expo = ([lo, hi]) => [p => lo * (hi / lo) ** p, v => Math.log(v / lo) / Math.log(hi / lo)];
-// Font sizes, in px, set as a CSS variable the editor's or console's font reads.
-function fontKnob(box, key, el, prop, def, after) {
-  let v = clampTo([9, 28], +store.get(key) || def);
-  const apply = () => { el.style.setProperty(prop, v + 'px'); after?.(); };
-  apply();
-  knob(box, 'size', () => v, x => { v = Math.round(x); apply(); store.set(key, v); }, lin([9, 28]), v => v + ' px');
-}
-const [codeBox, logBox, scopeBox, fallBox, helpBox] = ['editor', 'console', 'scope', 'fall', 'help'].map(k => panels[k].querySelector('.settings'));
-fontKnob(codeBox, 'codeSize', document.getElementById('code'), '--code-size', 14, () => editor.requestMeasure());
-codeBox.prepend(codeBox.lastChild); // size before theme
-fontKnob(logBox, 'logSize', log, '--log-size', 13);
-fontKnob(helpBox, 'helpSize', help, '--help-size', 13);
-const theme = document.getElementById('theme');
-theme.value = store.get('theme') ?? 'contrast';
-if (!theme.value) theme.value = 'contrast'; // a theme no longer offered
-editor.setTheme(theme.value);
-theme.onchange = () => { editor.setTheme(theme.value); store.set('theme', theme.value); };
-KEYS.forEach(([sk, lk], i) => {
-  if (+store.get(sk)) spans[i] = clampTo(SPAN[i], +store.get(sk));
-  const l = parseFloat(store.get(lk)); // a level can be 0 or negative, so not `||`
-  if (isFinite(l)) levels[i] = clampTo(LEVEL[i], l);
-});
-// The scope's span follows the cube of the slider (doubling per step would crawl at short spans and
-// race at long ones); the rest double, or add dB, evenly per step.
-const cube = [p => SPAN[0][1] * p ** 3, v => Math.cbrt(v / SPAN[0][1])];
-[[scopeBox, cube, expo(LEVEL[0]), 'gain'], [fallBox, expo(SPAN[1]), lin(LEVEL[1]), 'boost']].forEach(([box, sMap, lMap, lName], side) => {
-  knob(box, 'time', () => spans[side], v => tune(side, v, levels[side]), sMap, () => vizText(side)[0]);
-  knob(box, lName, () => levels[side], v => tune(side, spans[side], v), lMap, () => vizText(side)[1]);
-});
+  // Panel settings: the cog in a title strip shows or hides the strip of settings above its screen.
+  for (const p of Object.values(panels)) {
+    const cog = p.querySelector('.cog'), box = p.querySelector('.settings');
+    cog.onclick = () => { box.hidden = !box.hidden; cog.setAttribute('aria-expanded', !box.hidden); };
+  }
+  // A slider row in a settings strip: position 0..1 maps to a value by `to` and back by `from`.
+  function knob(box, name, get, set, [to, from], show) {
+    const row = document.createElement('label');
+    row.innerHTML = '<span></span><input type="range" min="0" max="1" step="any"><output></output>';
+    const [label, input, out] = row.children;
+    label.textContent = name;
+    const sync = () => { input.value = from(get()); out.textContent = show(get()); };
+    input.oninput = () => { set(to(+input.value)); sync(); };
+    sync();
+    box.append(row);
+  }
+  const lin = ([lo, hi]) => [p => lo + p * (hi - lo), v => (v - lo) / (hi - lo)];
+  const expo = ([lo, hi]) => [p => lo * (hi / lo) ** p, v => Math.log(v / lo) / Math.log(hi / lo)];
+  // Font sizes, in px, set as a CSS variable the editor's or console's font reads.
+  function fontKnob(box, key, el, prop, def, after) {
+    let v = clampTo([9, 28], +store.get(key) || def);
+    const apply = () => { el.style.setProperty(prop, v + 'px'); after?.(); };
+    apply();
+    knob(box, 'size', () => v, x => { v = Math.round(x); apply(); store.set(key, v); }, lin([9, 28]), v => v + ' px');
+  }
+  const [codeBox, logBox, scopeBox, fallBox, helpBox] = ['editor', 'console', 'scope', 'fall', 'help'].map(k => panels[k].querySelector('.settings'));
+  fontKnob(codeBox, 'codeSize', document.getElementById('code'), '--code-size', 14, () => editor.requestMeasure());
+  codeBox.prepend(codeBox.lastChild); // size before theme
+  fontKnob(logBox, 'logSize', log, '--log-size', 13);
+  fontKnob(helpBox, 'helpSize', help, '--help-size', 13);
+  const theme = document.getElementById('theme');
+  theme.value = store.get('theme') ?? 'contrast';
+  if (!theme.value) theme.value = 'contrast'; // a theme no longer offered
+  editor.setTheme(theme.value);
+  theme.onchange = () => { editor.setTheme(theme.value); store.set('theme', theme.value); };
+  KEYS.forEach(([sk, lk], i) => {
+    if (+store.get(sk)) spans[i] = clampTo(SPAN[i], +store.get(sk));
+    const l = parseFloat(store.get(lk)); // a level can be 0 or negative, so not `||`
+    if (isFinite(l)) levels[i] = clampTo(LEVEL[i], l);
+  });
+  // The scope's span follows the cube of the slider (doubling per step would crawl at short spans and
+  // race at long ones); the rest double, or add dB, evenly per step.
+  const cube = [p => SPAN[0][1] * p ** 3, v => Math.cbrt(v / SPAN[0][1])];
+  [[scopeBox, cube, expo(LEVEL[0]), 'gain'], [fallBox, expo(SPAN[1]), lin(LEVEL[1]), 'boost']].forEach(([box, sMap, lMap, lName], side) => {
+    knob(box, 'time', () => spans[side], v => tune(side, v, levels[side]), sMap, () => vizText(side)[0]);
+    knob(box, lName, () => levels[side], v => tune(side, spans[side], v), lMap, () => vizText(side)[1]);
+  });
 
-const aboutDialog = document.getElementById('aboutDialog');
-document.getElementById('about').onclick = () => aboutDialog.showModal();
-// Not <form method="dialog">: it relies on form submission, which some embedding browsers block.
-document.getElementById('aboutClose').onclick = () => aboutDialog.close();
-aboutDialog.onclick = e => e.target === aboutDialog && aboutDialog.close(); // backdrop click
-// Inserts a slider definition on a new line above the cursor's line and runs it.
-// A function, not a stored signal: each use reads the slider afresh. The line also calls it once
-// (and drops the result) so the slider shows whenever the line runs, not at its first use.
-document.getElementById('addSlider').onclick = () => {
-  let n = 1;
-  const text = editor.state.doc.toString();
-  while (text.includes(`"ctl${n}"`) || rows.some(r => r.firstChild.textContent === `ctl${n}`)) ++n;
-  const line = `\\["ctl${n}" 0 1 .5 slider] = ctl${n}  ctl${n} pop`;
-  const at = editor.state.doc.lineAt(editor.state.selection.main.head).from;
-  editor.dispatch({ changes: { from: at, insert: line + '\n' }, selection: { anchor: at + line.length } });
-  focusIfFine(editor);
-  run(line);
-};
+  const aboutDialog = document.getElementById('aboutDialog');
+  document.getElementById('about').onclick = () => aboutDialog.showModal();
+  // Not <form method="dialog">: it relies on form submission, which some embedding browsers block.
+  document.getElementById('aboutClose').onclick = () => aboutDialog.close();
+  aboutDialog.onclick = e => e.target === aboutDialog && aboutDialog.close(); // backdrop click
+  // Inserts a slider definition on a new line above the cursor's line and runs it.
+  // A function, not a stored signal: each use reads the slider afresh. The line also calls it once
+  // (and drops the result) so the slider shows whenever the line runs, not at its first use.
+  document.getElementById('addSlider').onclick = () => {
+    let n = 1;
+    const text = editor.state.doc.toString();
+    while (text.includes(`"ctl${n}"`) || rows.some(r => r.firstChild.textContent === `ctl${n}`)) ++n;
+    const line = `\\["ctl${n}" 0 1 .5 slider] = ctl${n}  ctl${n} pop`;
+    const at = editor.state.doc.lineAt(editor.state.selection.main.head).from;
+    editor.dispatch({ changes: { from: at, insert: line + '\n' }, selection: { anchor: at + line.length } });
+    focusIfFine(editor);
+    run(line);
+  };
 </script>
